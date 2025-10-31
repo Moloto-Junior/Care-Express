@@ -20,6 +20,18 @@ export default function ProfileScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
+  // 🔹 Doctor-specific states
+  const [specialty, setSpecialty] = useState('');
+  const [branch, setBranch] = useState('');
+  const [verified, setVerified] = useState(false);
+
+  // 🔹 Patient-specific states
+  const [age, setAge] = useState('');
+  const [address, setAddress] = useState('');
+  const [medicalAid, setMedicalAid] = useState(false);
+  const [medicalAidNumber, setMedicalAidNumber] = useState('');
+  const [extras, setExtras] = useState('');
+
   useEffect(() => {
     fetchUser();
   }, []);
@@ -36,6 +48,22 @@ export default function ProfileScreen({ navigation, route }) {
         setPhone(data.phone || '');
         setRole(data.role || '');
         setImage(data.profilePicture || null);
+
+        // 🔹 Set doctor-specific fields
+        if (data.role === 'Doctor') {
+          setSpecialty(data.specialty || '');
+          setBranch(data.branch || '');
+          setVerified(true);
+        }
+
+        // 🔹 Set patient-specific fields
+        if (data.role === 'Patient') {
+          setAge(data.age || '');
+          setAddress(data.address || '');
+          setMedicalAid(data.medicalAid || false);
+          setMedicalAidNumber(data.medicalAidNumber || '');
+          setExtras(data.extras || '');
+        }
       }
     } catch (error) {
       console.log('Error fetching user:', error);
@@ -53,7 +81,7 @@ export default function ProfileScreen({ navigation, route }) {
 
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images, // <- fixed deprecated line
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
@@ -110,8 +138,6 @@ export default function ProfileScreen({ navigation, route }) {
     const user = auth.currentUser;
 
     try {
-      console.log('Uploading image from URI:', uri);
-
       const formData = new FormData();
       formData.append('file', {
         uri,
@@ -128,7 +154,6 @@ export default function ProfileScreen({ navigation, route }) {
       const data = await response.json();
 
       if (data.secure_url) {
-        console.log('Cloudinary URL:', data.secure_url);
         setImage(data.secure_url);
 
         await update(ref(db, `users/${user.uid}`), {
@@ -177,6 +202,18 @@ export default function ProfileScreen({ navigation, route }) {
         email,
         phone,
         profilePicture: image,
+        ...(role === 'Doctor' && {
+          specialty,
+          branch,
+          verified: true
+        }),
+        ...(role === 'Patient' && {
+          age,
+          address,
+          medicalAid,
+          medicalAidNumber: medicalAid ? medicalAidNumber : '',
+          extras
+        })
       });
 
       Alert.alert('Success', 'Profile updated successfully!');
@@ -208,6 +245,9 @@ export default function ProfileScreen({ navigation, route }) {
     updateButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
     settingsButton: { backgroundColor: theme.card, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 15, flexDirection: 'row', justifyContent: 'center', borderWidth: 1, borderColor: theme.border },
     settingsButtonText: { color: theme.text, fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
+    doctorInfoContainer: { marginTop: 20, backgroundColor: theme.card, padding: 16, borderRadius: 12 },
+    doctorInfoText: { fontSize: 14, color: theme.text, marginBottom: 8 },
+    verifiedBadge: { fontWeight: 'bold', color: '#28a745' },
   });
 
   if (loading) {
@@ -281,6 +321,120 @@ export default function ProfileScreen({ navigation, route }) {
             placeholderTextColor={theme.placeholder}
           />
         </View>
+
+        {/* 🔹 Doctor-specific editable fields */}
+        {role === 'Doctor' && (
+          <>
+            <Text style={styles.label}>Specialty</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="medkit-outline" size={20} color={theme.lightGray} style={styles.inputIcon} />
+              <TextInput
+                placeholder="Enter your specialty"
+                value={specialty}
+                onChangeText={setSpecialty}
+                style={styles.input}
+                placeholderTextColor={theme.placeholder}
+              />
+            </View>
+
+            <Text style={styles.label}>Branch</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="location-outline" size={20} color={theme.lightGray} style={styles.inputIcon} />
+              <TextInput
+                placeholder="Enter your branch"
+                value={branch}
+                onChangeText={(text) => {
+                  if (text.toLowerCase().includes('johannesburg')) setBranch('Johannesburg Bramfontein');
+                  else if (text.toLowerCase().includes('polokwane')) setBranch('Limpopo Polokwane');
+                  else setBranch(text);
+                }}
+                style={styles.input}
+                placeholderTextColor={theme.placeholder}
+              />
+            </View>
+
+            {/* 🔹 Doctor info display */}
+            <View style={styles.doctorInfoContainer}>
+              <Text style={styles.doctorInfoText}>Specialty: {specialty}</Text>
+              <Text style={styles.doctorInfoText}>Branch: {branch}</Text>
+              <Text style={styles.doctorInfoText}>
+                Verified: <Text style={styles.verifiedBadge}>{verified ? 'Yes' : 'No'}</Text>
+              </Text>
+            </View>
+          </>
+        )}
+
+        {/* 🔹 Patient-specific fields */}
+        {role === 'Patient' && (
+          <>
+            <Text style={styles.label}>Age</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="time-outline" size={20} color={theme.lightGray} style={styles.inputIcon} />
+              <TextInput
+                placeholder="Enter your age"
+                value={age}
+                onChangeText={setAge}
+                keyboardType="numeric"
+                style={styles.input}
+                placeholderTextColor={theme.placeholder}
+              />
+            </View>
+
+            <Text style={styles.label}>Home Address</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="home-outline" size={20} color={theme.lightGray} style={styles.inputIcon} />
+              <TextInput
+                placeholder="Enter your address"
+                value={address}
+                onChangeText={setAddress}
+                style={styles.input}
+                placeholderTextColor={theme.placeholder}
+              />
+            </View>
+
+            <Text style={styles.label}>Medical Aid</Text>
+            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+              <TouchableOpacity
+                onPress={() => setMedicalAid(true)}
+                style={{ flex: 1, padding: 12, marginRight: 6, borderRadius: 8, backgroundColor: medicalAid ? theme.primary : theme.card, alignItems: 'center' }}>
+                <Text style={{ color: medicalAid ? '#fff' : theme.text }}>Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMedicalAid(false)}
+                style={{ flex: 1, padding: 12, marginLeft: 6, borderRadius: 8, backgroundColor: !medicalAid ? theme.primary : theme.card, alignItems: 'center' }}>
+                <Text style={{ color: !medicalAid ? '#fff' : theme.text }}>No</Text>
+              </TouchableOpacity>
+            </View>
+
+            {medicalAid && (
+              <>
+                <Text style={styles.label}>Medical Aid Number</Text>
+                <View style={styles.inputContainer}>
+                  <Ionicons name="card-outline" size={20} color={theme.lightGray} style={styles.inputIcon} />
+                  <TextInput
+                    placeholder="Enter your medical aid number"
+                    value={medicalAidNumber}
+                    onChangeText={setMedicalAidNumber}
+                    style={styles.input}
+                    placeholderTextColor={theme.placeholder}
+                  />
+                </View>
+              </>
+            )}
+
+            <Text style={styles.label}>Extras</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="document-text-outline" size={20} color={theme.lightGray} style={styles.inputIcon} />
+              <TextInput
+                placeholder="Extras"
+                value={extras}
+                onChangeText={setExtras}
+                style={styles.input}
+                placeholderTextColor={theme.placeholder}
+              />
+            </View>
+          </>
+        )}
 
         <TouchableOpacity style={styles.updateButton} onPress={updateProfile}>
           <Ionicons name="checkmark-circle" size={20} color="#fff" />

@@ -1,6 +1,6 @@
 // src/screens/HomeScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
 import { auth, db } from '../firebaseConfig';
 import { ref, onValue } from 'firebase/database';
@@ -11,6 +11,7 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState([]);
 
+  // Fetch current user
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (userId) {
@@ -29,6 +30,7 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
+  // Fetch doctors
   useEffect(() => {
     const usersRef = ref(db, 'users');
     const unsubscribe = onValue(usersRef, snapshot => {
@@ -37,7 +39,7 @@ export default function HomeScreen({ navigation }) {
         const doctorList = Object.keys(data)
           .filter(uid => data[uid].role === 'Doctor')
           .map(uid => ({ id: uid, ...data[uid] }));
-        setDoctors(doctorList.slice(0, 3));
+        setDoctors(doctorList.slice(0, 3)); // Featured doctors
       }
     });
     return () => unsubscribe();
@@ -66,28 +68,39 @@ export default function HomeScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  const renderDoctor = (doctor) => (
-    <TouchableOpacity 
-      key={doctor.id} 
-      style={styles.doctorCard}
-      onPress={() => navigation.navigate('BookAppointment')}
-    >
-      <View style={styles.doctorAvatar}>
+  // Render each doctor with profile picture and navigation to DoctorProfileScreen
+ // Render each doctor with profile picture and navigation to DoctorProfileScreen
+const renderDoctor = (doctor) => (
+  <TouchableOpacity 
+    key={doctor.id} 
+    style={styles.doctorCard}
+    onPress={() => navigation.navigate('DoctorProfile', { doctorId: doctor.id })}
+  >
+    <View style={styles.doctorAvatar}>
+      {doctor.profilePicture ? (
+        <Image 
+          source={{ uri: doctor.profilePicture }} 
+          style={{ width: 60, height: 60, borderRadius: 30 }} 
+        />
+      ) : (
         <Ionicons name="person" size={30} color={COLORS.primary} />
+      )}
+    </View>
+    <View style={styles.doctorInfo}>
+      <Text style={styles.doctorName}>Dr. {doctor.name}</Text>
+      <Text style={styles.doctorSpecialty}>{doctor.specialty || 'General Practice'}</Text>
+      <View style={styles.ratingContainer}>
+        <Ionicons name="star" size={14} color="#FFC107" />
+        <Text style={styles.ratingText}>4.8</Text>
       </View>
-      <View style={styles.doctorInfo}>
-        <Text style={styles.doctorName}>Dr. {doctor.name}</Text>
-        <Text style={styles.doctorSpecialty}>General Practice</Text>
-        <View style={styles.ratingContainer}>
-          <Ionicons name="star" size={14} color="#FFC107" />
-          <Text style={styles.ratingText}>4.8</Text>
-        </View>
-      </View>
-      <TouchableOpacity style={styles.bookIcon}>
-        <Ionicons name="calendar" size={24} color={COLORS.primary} />
-      </TouchableOpacity>
+    </View>
+    <TouchableOpacity style={styles.bookIcon} onPress={() => navigation.navigate('BookAppointment')}>
+      <Ionicons name="calendar" size={24} color={COLORS.primary} />
     </TouchableOpacity>
-  );
+  </TouchableOpacity>
+);
+
+  
 
   if (loading) {
     return (
@@ -149,168 +162,34 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  scrollView: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  contentContainer: {
-    padding: SIZES.padding,
-    paddingBottom: 30,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 25,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '300',
-    color: COLORS.text,
-  },
-  userName: {
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  subtext: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-    marginTop: 5,
-  },
-  notificationButton: {
-    position: 'relative',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.secondary,
-  },
-  quickActions: {
-    marginBottom: 25,
-  },
-  card: {
-    backgroundColor: COLORS.card,
-    borderRadius: SIZES.radius,
-    padding: 20,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  cardIcon: {
-    marginRight: 15,
-  },
-  cardText: {
-    fontSize: SIZES.font + 2,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  section: {
-    marginBottom: 25,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  viewAllText: {
-    color: COLORS.primary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  doctorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    padding: 15,
-    borderRadius: SIZES.radius,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  doctorAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  doctorInfo: {
-    flex: 1,
-  },
-  doctorName: {
-    fontSize: SIZES.font + 1,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  doctorSpecialty: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-    marginTop: 2,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  ratingText: {
-    fontSize: 12,
-    color: COLORS.text,
-    marginLeft: 4,
-  },
-  bookIcon: {
-    padding: 8,
-  },
-  emptyText: {
-    color: COLORS.lightGray,
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  tipCard: {
-    backgroundColor: COLORS.card,
-    padding: 15,
-    borderRadius: SIZES.radius,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  tipTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  tipText: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-    marginTop: 2,
-  },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
+  scrollView: { flex: 1, backgroundColor: COLORS.background },
+  contentContainer: { padding: SIZES.padding, paddingBottom: 30 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  greeting: { fontSize: 24, fontWeight: '300', color: COLORS.text },
+  userName: { fontWeight: '700', color: COLORS.primary },
+  subtext: { fontSize: 14, color: COLORS.lightGray, marginTop: 5 },
+  notificationButton: { position: 'relative' },
+  notificationBadge: { position: 'absolute', top: 0, right: 0, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.secondary },
+  quickActions: { marginBottom: 25 },
+  card: { backgroundColor: COLORS.card, borderRadius: SIZES.radius, padding: 20, marginBottom: 12, flexDirection: 'row', alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84, elevation: 5 },
+  cardIcon: { marginRight: 15 },
+  cardText: { fontSize: SIZES.font + 2, fontWeight: '600', color: COLORS.text },
+  section: { marginBottom: 25 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  sectionTitle: { fontSize: 20, fontWeight: '600', color: COLORS.text },
+  viewAllText: { color: COLORS.primary, fontWeight: '600', fontSize: 14 },
+  doctorCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, padding: 15, borderRadius: SIZES.radius, marginBottom: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+  doctorAvatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.background, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  doctorInfo: { flex: 1 },
+  doctorName: { fontSize: SIZES.font + 1, fontWeight: '600', color: COLORS.text },
+  doctorSpecialty: { fontSize: 14, color: COLORS.lightGray, marginTop: 2 },
+  ratingContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  ratingText: { fontSize: 12, color: COLORS.text, marginLeft: 4 },
+  bookIcon: { padding: 8 },
+  emptyText: { color: COLORS.lightGray, textAlign: 'center', marginTop: 10 },
+  tipCard: { backgroundColor: COLORS.card, padding: 15, borderRadius: SIZES.radius, flexDirection: 'row', alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+  tipTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },
+  tipText: { fontSize: 14, color: COLORS.lightGray, marginTop: 2 },
 });
+ 

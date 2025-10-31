@@ -1,6 +1,6 @@
 // src/screens/BookAppointmentScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
 import { db, auth } from '../firebaseConfig';
 import { ref, onValue, push } from 'firebase/database';
@@ -130,35 +130,59 @@ export default function BookAppointmentScreen({ navigation }) {
           horizontal
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.doctorCard,
-                selectedDoctor?.id === item.id && styles.selectedDoctorCard,
-              ]}
-              onPress={() => setSelectedDoctor(item)}
-            >
-              <Ionicons
-                name="person-circle"
-                size={50}
-                color={selectedDoctor?.id === item.id ? '#fff' : COLORS.primary}
-              />
-              <Text
+            <View style={{ alignItems: 'center' }}>
+              <TouchableOpacity
                 style={[
-                  styles.doctorName,
-                  selectedDoctor?.id === item.id && styles.selectedDoctorName,
+                  styles.doctorCard,
+                  selectedDoctor?.id === item.id && styles.selectedDoctorCard,
                 ]}
+                onPress={() => setSelectedDoctor(item)}
               >
-                Dr. {item.name}
-              </Text>
-              <Text
-                style={[
-                  styles.doctorEmail,
-                  selectedDoctor?.id === item.id && styles.selectedDoctorEmail,
-                ]}
+                {/* Added small circular profile picture */}
+               {item.profilePicture ? (
+  <Image
+    source={{ uri: item.profilePicture }}
+    style={{
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      borderWidth: selectedDoctor?.id === item.id ? 2 : 0,
+      borderColor: selectedDoctor?.id === item.id ? '#fff' : 'transparent',
+    }}
+  />
+) : (
+  <Ionicons
+    name="person-circle"
+    size={50}
+    color={selectedDoctor?.id === item.id ? '#fff' : COLORS.primary}
+  />
+)}
+                <Text
+                  style={[
+                    styles.doctorName,
+                    selectedDoctor?.id === item.id && styles.selectedDoctorName,
+                  ]}
+                >
+                  Dr. {item.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.doctorEmail,
+                    selectedDoctor?.id === item.id && styles.selectedDoctorEmail,
+                  ]}
+                >
+                  {item.email}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Small View Profile Button */}
+              <TouchableOpacity
+                style={styles.viewProfileButton}
+                onPress={() => navigation.navigate('DoctorProfile', { doctorId: item.id })}
               >
-                {item.email}
-              </Text>
-            </TouchableOpacity>
+                <Text style={styles.viewProfileText}>View Profile</Text>
+              </TouchableOpacity>
+            </View>
           )}
         />
       )}
@@ -289,5 +313,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: COLORS.lightGray,
     marginVertical: 20,
+  },
+  viewProfileButton: {
+    marginTop: 5,
+    backgroundColor: 'green',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  viewProfileText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -4,7 +4,7 @@ import { TouchableOpacity, Text, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { COLORS } from './Theme';
-
+import DoctorProfileScreen from './screens/DoctorProfileScreen'; 
 import SplashScreen from './screens/SplashScreen';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
@@ -20,6 +20,7 @@ import NotificationsScreen from './screens/NotificationsScreen';
 import CartScreen from './screens/CartScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import PatientProfile from './screens/PatientProfile';
 import SearchMedicineScreen from './screens/SearchMedicineScreen';
 import ViewProfileScreen from './screens/ViewProfileScreen'; // ✅ NEW - Add this
 import { auth } from './firebaseConfig';
@@ -70,6 +71,21 @@ export default function AppNavigator() {
             )
           })}
         />
+        <Stack.Screen
+  name="DoctorProfile"
+  component={DoctorProfileScreen}
+  options={{
+    headerShown: true,
+    title: 'Doctor Profile',
+    headerStyle: { backgroundColor: COLORS.primary },
+    headerTintColor: '#fff',
+  }}
+/>
+<Stack.Screen 
+  name="PatientProfile" 
+  component={PatientProfile} 
+  options={{ title: 'Patient Profile' }} 
+/>
 
         <Stack.Screen 
           name="PatientTabs" 
