@@ -1,10 +1,8 @@
-// src/screens/SearchMedicineScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Image } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
 import { Ionicons } from '@expo/vector-icons';
 
-// Medicine images mapping
 const medicineImages = {
   'paracetamol': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=200&h=200&fit=crop',
   'ibuprofen': 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=200&h=200&fit=crop',
@@ -106,7 +104,6 @@ export default function SearchMedicineScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={COLORS.lightGray} style={styles.searchIcon} />
         <TextInput
@@ -123,13 +120,11 @@ export default function SearchMedicineScreen({ navigation }) {
         )}
       </View>
 
-      {/* Search Button */}
       <TouchableOpacity style={styles.searchButton} onPress={() => fetchMedicines(search)}>
         <Ionicons name="search" size={18} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.searchButtonText}>Search</Text>
       </TouchableOpacity>
 
-      {/* Cart Button */}
       {cart.length > 0 && (
         <TouchableOpacity
           style={styles.cartButton}
@@ -143,7 +138,6 @@ export default function SearchMedicineScreen({ navigation }) {
         </TouchableOpacity>
       )}
 
-      {/* Medicine List */}
       {loading ? (
         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 50 }} />
       ) : (
@@ -160,7 +154,6 @@ export default function SearchMedicineScreen({ navigation }) {
           }
           renderItem={({ item }) => (
             <View style={styles.medicineCard}>
-              {/* Medicine Image */}
               <Image 
                 source={{ uri: item.image }} 
                 style={styles.medicineImage}

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, KeyboardAvoidingView, ScrollView, Platform, Image, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, KeyboardAvoidingView, ScrollView, Platform, Image, ActivityIndicator, Animated, Easing } from 'react-native';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { ref, set, update } from 'firebase/database';
@@ -7,7 +7,6 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'fire
 import { COLORS, SIZES } from '../Theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import LottieView from 'lottie-react-native'; // Added for animation
 
 export default function RegisterScreen({ navigation }) {
   const [name, setName] = useState('');
@@ -19,19 +18,109 @@ export default function RegisterScreen({ navigation }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Doctor states
   const [specialty, setSpecialty] = useState('');
   const [branch, setBranch] = useState('Limpopo');
   const [licenseUri, setLicenseUri] = useState(null);
   const [uploadingLicense, setUploadingLicense] = useState(false);
 
-  // Patient-specific states
   const [age, setAge] = useState('');
   const [address, setAddress] = useState('');
   const [medicalAid, setMedicalAid] = useState(false);
   const [medicalAidNumber, setMedicalAidNumber] = useState('');
 
   const [extras, setExtras] = useState('');
+
+  const logoScale = useRef(new Animated.Value(0)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
+  const formSlide = useRef(new Animated.Value(50)).current;
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const heartbeatAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(logoScale, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoRotate, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.parallel([
+      Animated.timing(formSlide, {
+        toValue: 0,
+        duration: 600,
+        delay: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(formOpacity, {
+        toValue: 1,
+        duration: 600,
+        delay: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(heartbeatAnim, {
+          toValue: 1.1,
+          duration: 150,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(heartbeatAnim, {
+          toValue: 1,
+          duration: 150,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(heartbeatAnim, {
+          toValue: 1.1,
+          duration: 150,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(heartbeatAnim, {
+          toValue: 1,
+          duration: 150,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1000),
+      ])
+    ).start();
+  }, []);
+
+  const rotate = logoRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const pickLicense = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -90,7 +179,6 @@ export default function RegisterScreen({ navigation }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Base user data
       const userData = {
         uid: user.uid,
         name,
@@ -114,10 +202,8 @@ export default function RegisterScreen({ navigation }) {
         userData.extras = extras;
       }
 
-      // Save initial user record
       await set(ref(db, `users/${user.uid}`), userData);
 
-      // Upload doctor license if needed
       if (role === 'Doctor' && licenseUri) {
         const licenseUrl = await uploadLicenseToStorage(licenseUri, user.uid);
         if (licenseUrl) {
@@ -143,43 +229,49 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      
-      {/* Floating background animation */}
-      <LottieView
-        source={require('../assets/animations/health.json')} // replace with your JSON file
-        autoPlay
-        loop
-        style={styles.backgroundAnimation}
-      />
-
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="medical" size={50} color={COLORS.primary} />
-          </View>
-          <Text style={styles.logoText}>
-            Care<Text style={styles.logoTextSecondary}>Express</Text>
-          </Text>
-          <Text style={styles.tagline}>Join us today</Text>
+          <Animated.View
+            style={{
+              transform: [{ scale: logoScale }, { rotate }, { scale: pulseAnim }],
+            }}
+          >
+            <View style={styles.logoCircle}>
+              <Animated.View style={{ transform: [{ scale: heartbeatAnim }] }}>
+                <Ionicons name="medical" size={50} color={COLORS.primary} />
+              </Animated.View>
+            </View>
+          </Animated.View>
+          <Animated.View style={{ opacity: formOpacity }}>
+            <Text style={styles.logoText}>
+              Care<Text style={styles.logoTextSecondary}>Express</Text>
+            </Text>
+            <Text style={styles.tagline}>Join us today</Text>
+          </Animated.View>
         </View>
 
-        <View style={styles.formContainer}>
+        <Animated.View
+          style={[
+            styles.formContainer,
+            {
+              transform: [{ translateY: formSlide }],
+              opacity: formOpacity,
+            },
+          ]}
+        >
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Sign up to get started</Text>
 
-          {/* Name */}
           <View style={styles.inputContainer}>
             <Ionicons name="person-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
             <TextInput placeholder="Full Name" value={name} onChangeText={setName} style={styles.input} placeholderTextColor={COLORS.lightGray} />
           </View>
 
-          {/* Email */}
           <View style={styles.inputContainer}>
             <Ionicons name="mail-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
             <TextInput placeholder="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" style={styles.input} placeholderTextColor={COLORS.lightGray} />
           </View>
 
-          {/* Password */}
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
             <TextInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} style={styles.input} placeholderTextColor={COLORS.lightGray} />
@@ -188,7 +280,6 @@ export default function RegisterScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Confirm Password */}
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
             <TextInput placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showConfirmPassword} style={styles.input} placeholderTextColor={COLORS.lightGray} />
@@ -197,7 +288,6 @@ export default function RegisterScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Role Selection */}
           <Text style={styles.roleLabel}>I am a:</Text>
           <View style={styles.roleContainer}>
             <TouchableOpacity onPress={() => setRole('Patient')} style={[styles.roleButton, role === 'Patient' && styles.roleButtonActive]}>
@@ -210,7 +300,6 @@ export default function RegisterScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Doctor fields */}
           {role === 'Doctor' && (
             <>
               <Text style={styles.label}>Specialty</Text>
@@ -247,7 +336,6 @@ export default function RegisterScreen({ navigation }) {
             </>
           )}
 
-          {/* Patient fields */}
           {role === 'Patient' && (
             <>
               <Text style={styles.label}>Age</Text>
@@ -300,7 +388,7 @@ export default function RegisterScreen({ navigation }) {
               <Text style={styles.loginLink}>Login</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -339,13 +427,4 @@ const styles = StyleSheet.create({
   loginText: { color: COLORS.text, fontSize: 14 },
   loginLink: { color: COLORS.primary, fontSize: 14, fontWeight: 'bold' },
   label: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginTop: 10, marginBottom: 8 },
-  backgroundAnimation: { // Added animation style
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 0,
-    opacity: 0.3,
-  },
 });

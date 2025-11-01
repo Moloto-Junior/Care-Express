@@ -1,4 +1,3 @@
-// src/screens/CartScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert, StyleSheet, Image } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
@@ -124,13 +123,11 @@ export default function CartScreen({ route, navigation }) {
               <Text style={styles.totalValue}>R{getTotal() + 50}</Text>
             </View>
 
-            {/* Keep Map location button intact */}
             <TouchableOpacity style={styles.checkoutButton} onPress={proceedToCheckout}>
               <Ionicons name="location" size={20} color="#fff" style={{ marginRight: 10 }} />
               <Text style={styles.checkoutText}>Set Delivery Location</Text>
             </TouchableOpacity>
 
-            {/* Updated Pay Now: navigate to PaymentScreen */}
             <TouchableOpacity style={styles.payButton} onPress={() => {
               if (cart.length === 0) {
                 Alert.alert('Cart Empty', 'Please add some medicines to your cart first.');
@@ -138,7 +135,7 @@ export default function CartScreen({ route, navigation }) {
               }
               navigation.navigate('Payment', {
                 cart: cart,
-                totalAmount: getTotal() + 50, // subtotal + delivery
+                totalAmount: getTotal() + 50, 
               });
             }}>
               <Ionicons name="card" size={20} color="#fff" style={{ marginRight: 10 }} />
@@ -151,7 +148,6 @@ export default function CartScreen({ route, navigation }) {
   );
 }
 
-// Styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

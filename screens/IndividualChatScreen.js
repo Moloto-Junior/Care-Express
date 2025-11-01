@@ -1,4 +1,3 @@
-// src/screens/IndividualChatScreen.js
 import React, { useEffect, useState, useRef } from 'react';
 import { View, TextInput, TouchableOpacity, FlatList, Text, KeyboardAvoidingView, StyleSheet, Platform, Image } from 'react-native';
 import { db, auth } from '../firebaseConfig';
@@ -46,7 +45,6 @@ export default function IndividualChatScreen({ route }) {
       });
       setText('');
       
-      // Scroll to bottom after sending
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);

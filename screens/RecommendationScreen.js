@@ -1,4 +1,3 @@
-// src/screens/RecommendationScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
@@ -130,10 +129,8 @@ export default function RecommendationScreen({ navigation }) {
             onPress={() => markAsRead(item.id)}
             activeOpacity={0.7}
           >
-            {/* Unread Indicator */}
             {!item.read && <View style={styles.unreadDot} />}
 
-            {/* Doctor Info Header */}
             <View style={styles.recHeader}>
               <View style={styles.doctorAvatar}>
                 <Ionicons name="medical" size={24} color={COLORS.primary} />
@@ -145,14 +142,12 @@ export default function RecommendationScreen({ navigation }) {
               <Ionicons name="chevron-forward" size={20} color={COLORS.lightGray} />
             </View>
             
-            {/* Recommendation Content */}
             <View style={styles.recContent}>
               <Text style={styles.recText} numberOfLines={4}>
                 {item.recommendation}
               </Text>
             </View>
 
-            {/* Footer */}
             <View style={styles.recFooter}>
               {item.read ? (
                 <>

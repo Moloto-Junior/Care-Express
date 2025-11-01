@@ -1,4 +1,3 @@
-// src/screens/SettingsScreen.js
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -139,14 +138,12 @@ export default function SettingsScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
       <View style={{ padding: 20, paddingTop: 60 }}>
         <Text style={{ fontSize: 32, fontWeight: 'bold', color: theme.text }}>
           {getTranslation(language, 'settings')}
         </Text>
       </View>
 
-      {/* Appearance Section */}
       <Text style={styles.sectionTitle}>APPEARANCE</Text>
       <View style={styles.section}>
         <TouchableOpacity style={[styles.settingItem, styles.settingItemLast]}>
@@ -163,7 +160,6 @@ export default function SettingsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Language Section */}
       <Text style={styles.sectionTitle}>LANGUAGE</Text>
       <View style={styles.section}>
         <TouchableOpacity
@@ -204,7 +200,6 @@ export default function SettingsScreen({ navigation }) {
         ))}
       </View>
 
-      {/* Account Section */}
       <Text style={styles.sectionTitle}>ACCOUNT</Text>
       <View style={styles.section}>
         <TouchableOpacity
@@ -238,7 +233,6 @@ export default function SettingsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* About Section */}
       <Text style={styles.sectionTitle}>ABOUT</Text>
       <View style={styles.section}>
         <TouchableOpacity style={[styles.settingItem]}>
@@ -266,7 +260,6 @@ export default function SettingsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out" size={20} color="#fff" />
         <Text style={styles.logoutText}>Logout</Text>

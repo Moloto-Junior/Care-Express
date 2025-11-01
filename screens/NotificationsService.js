@@ -1,7 +1,6 @@
 import { ref, push } from 'firebase/database';
 import { db } from '../firebaseConfig';
 
-// Simple Firebase notification system
 export const notifyUserByUID = async (uid, title, message) => {
   try {
     await push(ref(db, `notifications/${uid}`), {

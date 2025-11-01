@@ -1,4 +1,3 @@
-// Navigation.js
 import React from 'react';
 import { TouchableOpacity, Text, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
@@ -22,7 +21,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import PatientProfile from './screens/PatientProfile';
 import SearchMedicineScreen from './screens/SearchMedicineScreen';
-import ViewProfileScreen from './screens/ViewProfileScreen'; // ✅ NEW - Add this
+import ViewProfileScreen from './screens/ViewProfileScreen'; 
 import { auth } from './firebaseConfig';
 
 const Stack = createNativeStackNavigator();
@@ -134,7 +133,6 @@ export default function AppNavigator() {
           }} 
         />
 
-        {/* ✅ NEW - View Other User's Profile */}
         <Stack.Screen 
           name="ViewProfile" 
           component={ViewProfileScreen} 

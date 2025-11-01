@@ -1,4 +1,3 @@
-// src/screens/ViewProfileScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
@@ -59,7 +58,6 @@ export default function ViewProfileScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header with Profile Picture */}
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           {userData.profilePicture ? (
@@ -143,7 +141,6 @@ export default function ViewProfileScreen({ route, navigation }) {
         </View>
       </View>
 
-      {/* Action Buttons */}
       <View style={styles.actionsSection}>
         <TouchableOpacity style={styles.chatButton} onPress={handleStartChat}>
           <Ionicons name="chatbubbles" size={20} color="#fff" />

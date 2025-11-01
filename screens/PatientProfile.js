@@ -36,7 +36,6 @@ export default function PatientProfile({ route }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
       <View style={styles.header}>
         {patient.profilePicture ? (
           <Image source={{ uri: patient.profilePicture }} style={styles.avatar} />
@@ -49,7 +48,6 @@ export default function PatientProfile({ route }) {
         <Text style={styles.email}>{patient.email}</Text>
       </View>
 
-      {/* Info Card */}
       <View style={styles.card}>
         <Text style={styles.label}>Phone</Text>
         <Text style={styles.value}>{patient.phone || 'N/A'}</Text>

@@ -1,17 +1,17 @@
-// src/screens/HomeScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
 import { auth, db } from '../firebaseConfig';
 import { ref, onValue } from 'firebase/database';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../ThemeContext';
+import { getTranslation } from '../translations';
 
 export default function HomeScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState([]);
 
-  // Fetch current user
   useEffect(() => {
     const userId = auth.currentUser?.uid;
     if (userId) {
@@ -30,7 +30,6 @@ export default function HomeScreen({ navigation }) {
     }
   }, []);
 
-  // Fetch doctors
   useEffect(() => {
     const usersRef = ref(db, 'users');
     const unsubscribe = onValue(usersRef, snapshot => {
@@ -39,7 +38,7 @@ export default function HomeScreen({ navigation }) {
         const doctorList = Object.keys(data)
           .filter(uid => data[uid].role === 'Doctor')
           .map(uid => ({ id: uid, ...data[uid] }));
-        setDoctors(doctorList.slice(0, 3)); // Featured doctors
+        setDoctors(doctorList.slice(0, 3)); 
       }
     });
     return () => unsubscribe();
@@ -68,8 +67,6 @@ export default function HomeScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  // Render each doctor with profile picture and navigation to DoctorProfileScreen
- // Render each doctor with profile picture and navigation to DoctorProfileScreen
 const renderDoctor = (doctor) => (
   <TouchableOpacity 
     key={doctor.id} 
@@ -126,12 +123,10 @@ const renderDoctor = (doctor) => (
         </TouchableOpacity>
       </View>
 
-      {/* Quick Actions */}
       <View style={styles.quickActions}>
         {features.map(renderFeatureCard)}
       </View>
 
-      {/* Featured Doctors Section */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Featured Doctors</Text>
@@ -146,9 +141,8 @@ const renderDoctor = (doctor) => (
         )}
       </View>
 
-      {/* Health Tips Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Health Tips</Text>
+        <Text style={styles.sectionTitle}>Health Tip</Text>
         <View style={styles.tipCard}>
           <Ionicons name="water" size={40} color={COLORS.primary} />
           <View style={{ flex: 1, marginLeft: 15 }}>

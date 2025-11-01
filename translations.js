@@ -1,7 +1,5 @@
-// src/translations.js
 export const translations = {
   en: {
-    // Common
     welcome: 'Welcome',
     login: 'Login',
     register: 'Register',
@@ -14,7 +12,6 @@ export const translations = {
     save: 'Save',
     cancel: 'Cancel',
     
-    // Home
     home: 'Home',
     medicine: 'Medicine',
     chat: 'Chat',
@@ -22,7 +19,6 @@ export const translations = {
     dashboard: 'Dashboard',
     appointments: 'Appointments',
     
-    // Settings
     settings: 'Settings',
     darkMode: 'Dark Mode',
     language: 'Language',
@@ -30,13 +26,11 @@ export const translations = {
     lightTheme: 'Light Theme',
     darkTheme: 'Dark Theme',
     
-    // Messages
     paymentSuccessful: 'Payment Successful',
     orderPlaced: 'Order Placed',
     appointmentBooked: 'Appointment Booked',
   },
   af: {
-    // Afrikaans
     welcome: 'Welkom',
     login: 'Teken aan',
     register: 'Registreer',
@@ -68,7 +62,6 @@ export const translations = {
     appointmentBooked: 'Afspraak Bespreek',
   },
   zu: {
-    // Zulu
     welcome: 'Siyakwamukela',
     login: 'Ngena',
     register: 'Bhalisa',

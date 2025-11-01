@@ -1,4 +1,4 @@
-// src/screens/BookAppointmentScreen.js
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput, Alert, StyleSheet, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
@@ -6,6 +6,7 @@ import { db, auth } from '../firebaseConfig';
 import { ref, onValue, push } from 'firebase/database';
 import { notifyUserByUID } from './NotificationsService';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../ThemeContext';
 
 export default function BookAppointmentScreen({ navigation }) {
   const [doctors, setDoctors] = useState([]);
@@ -138,7 +139,7 @@ export default function BookAppointmentScreen({ navigation }) {
                 ]}
                 onPress={() => setSelectedDoctor(item)}
               >
-                {/* Added small circular profile picture */}
+               
                {item.profilePicture ? (
   <Image
     source={{ uri: item.profilePicture }}

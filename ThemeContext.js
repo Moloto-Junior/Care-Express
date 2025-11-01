@@ -1,40 +1,38 @@
-// src/ThemeContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ThemeContext = createContext();
 
-export const useTheme = () => useContext(ThemeContext);
-
-// Light Theme Colors
-const lightTheme = {
+export const lightTheme = {
   primary: '#007BFF',
-  secondary: '#FF3B3B',
-  background: '#F8F9FA',
+  secondary: '#FF6B6B',
+  background: '#F5F5F5',
   card: '#FFFFFF',
   text: '#333333',
-  lightGray: '#ccc',
-  success: '#28A745',
+  lightGray: '#999999',
   border: '#E0E0E0',
-  placeholder: '#999999',
+  success: '#4CAF50',
+  warning: '#FFC107',
+  error: '#F44336',
 };
 
-// Dark Theme Colors
-const darkTheme = {
+export const darkTheme = {
   primary: '#4A9EFF',
-  secondary: '#FF6B6B',
+  secondary: '#FF8787',
   background: '#121212',
   card: '#1E1E1E',
   text: '#FFFFFF',
-  lightGray: '#666666',
-  success: '#4CAF50',
+  lightGray: '#B0B0B0',
   border: '#333333',
-  placeholder: '#888888',
+  success: '#66BB6A',
+  warning: '#FFD54F',
+  error: '#EF5350',
 };
 
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [language, setLanguage] = useState('en');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadPreferences();
@@ -53,14 +51,16 @@ export const ThemeProvider = ({ children }) => {
       }
     } catch (error) {
       console.log('Error loading preferences:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const toggleTheme = async () => {
     try {
-      const newTheme = !isDarkMode;
-      setIsDarkMode(newTheme);
-      await AsyncStorage.setItem('theme', newTheme ? 'dark' : 'light');
+      const newMode = !isDarkMode;
+      setIsDarkMode(newMode);
+      await AsyncStorage.setItem('theme', newMode ? 'dark' : 'light');
     } catch (error) {
       console.log('Error saving theme:', error);
     }
@@ -85,9 +85,18 @@ export const ThemeProvider = ({ children }) => {
         toggleTheme,
         language,
         changeLanguage,
+        isLoading,
       }}
     >
       {children}
     </ThemeContext.Provider>
   );
+};
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within ThemeProvider');
+  }
+  return context;
 };

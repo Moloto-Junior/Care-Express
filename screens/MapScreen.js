@@ -1,4 +1,3 @@
-// src/screens/MapScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet, ActivityIndicator } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -18,7 +17,6 @@ export default function MapScreen({ navigation }) {
     const fetchLocation = async () => {
       const user = auth.currentUser;
       try {
-        // Check if user already has a saved location
         const snapshot = await get(ref(db, `users/${user.uid}/deliveryLocation`));
         if (snapshot.exists()) {
           const loc = snapshot.val();
@@ -31,7 +29,6 @@ export default function MapScreen({ navigation }) {
           });
           getAddressFromCoords(loc.latitude, loc.longitude);
         } else {
-          // Request location permission
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status !== 'granted') {
             Alert.alert('Permission Denied', 'Please allow location access to set delivery address.');
@@ -39,7 +36,6 @@ export default function MapScreen({ navigation }) {
             return;
           }
 
-          // Get current location
           const loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.High,
           });
@@ -164,7 +160,6 @@ export default function MapScreen({ navigation }) {
         )}
       </MapView>
 
-      {/* Address Card */}
       {address && (
         <View style={styles.addressCard}>
           <Ionicons name="location" size={24} color={COLORS.primary} />
@@ -175,18 +170,15 @@ export default function MapScreen({ navigation }) {
         </View>
       )}
 
-      {/* Current Location Button */}
       <TouchableOpacity style={styles.currentLocationButton} onPress={getCurrentLocation}>
         <Ionicons name="locate" size={24} color={COLORS.primary} />
       </TouchableOpacity>
 
-      {/* Instructions */}
       <View style={styles.instructionsCard}>
         <Ionicons name="information-circle" size={20} color={COLORS.primary} />
         <Text style={styles.instructionsText}>Tap anywhere on the map to set your delivery location</Text>
       </View>
 
-      {/* Save Button */}
       <TouchableOpacity style={styles.saveButton} onPress={saveLocation}>
         <Ionicons name="checkmark-circle" size={24} color="white" style={{ marginRight: 10 }} />
         <Text style={styles.saveButtonText}>Save Location</Text>

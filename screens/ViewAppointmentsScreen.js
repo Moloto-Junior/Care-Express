@@ -1,4 +1,3 @@
-// src/screens/ViewAppointmentsScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Image } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
@@ -16,7 +15,6 @@ export default function ViewAppointmentsScreen() {
   useEffect(() => {
     const userId = auth.currentUser.uid;
 
-    // Get user role and name
     const userRef = ref(db, `users/${userId}`);
     get(userRef).then(snapshot => {
       if (snapshot.exists()) {
@@ -26,7 +24,6 @@ export default function ViewAppointmentsScreen() {
       }
     });
 
-    // Fetch appointments
     const appointmentsRef = ref(db, 'appointments');
     const unsubscribe = onValue(appointmentsRef, snapshot => {
       const data = snapshot.val();
@@ -44,7 +41,6 @@ export default function ViewAppointmentsScreen() {
           return item.patientId === userId;
         });
 
-      // For each appointment, fetch profile pictures from users
       const promises = list.map(async item => {
         const patientSnap = await get(ref(db, `users/${item.patientId}`));
         const doctorSnap = await get(ref(db, `users/${item.doctorId}`));

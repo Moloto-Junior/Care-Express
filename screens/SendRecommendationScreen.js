@@ -1,4 +1,3 @@
-// src/screens/SendRecommendationScreen.js
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
@@ -16,7 +15,6 @@ export default function SendRecommendationScreen({ navigation }) {
   const [doctorName, setDoctorName] = useState('');
 
   useEffect(() => {
-    // Get doctor's name
     const doctorId = auth.currentUser.uid;
     const doctorRef = ref(db, `users/${doctorId}`);
     
@@ -26,7 +24,6 @@ export default function SendRecommendationScreen({ navigation }) {
       }
     });
 
-    // Fetch all patients
     const usersRef = ref(db, 'users');
     const unsubscribe = onValue(usersRef, snapshot => {
       const data = snapshot.val();
@@ -65,7 +62,6 @@ export default function SendRecommendationScreen({ navigation }) {
     try {
       const doctorId = auth.currentUser.uid;
       
-      // Save recommendation to patient's recommendations
       const recData = {
         doctorId,
         doctorName,
@@ -78,7 +74,6 @@ export default function SendRecommendationScreen({ navigation }) {
 
       await push(ref(db, `recommendations/${selectedPatient.id}`), recData);
 
-      // Send notification to patient
       await notifyUserByUID(
         selectedPatient.id,
         'New Recommendation from Doctor',
@@ -87,7 +82,6 @@ export default function SendRecommendationScreen({ navigation }) {
 
       setSending(false);
 
-      // Show success message
       Alert.alert(
         '✅ Recommendation Sent!',
         `Your recommendation has been sent to ${selectedPatient.name} successfully.`,
@@ -132,14 +126,12 @@ export default function SendRecommendationScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
       <View style={styles.header}>
         <Ionicons name="medical" size={40} color={COLORS.primary} />
         <Text style={styles.headerTitle}>Send Health Recommendation</Text>
         <Text style={styles.headerSubtitle}>Select a patient and provide health advice</Text>
       </View>
 
-      {/* Selected Patient Card */}
       {selectedPatient && (
         <View style={styles.selectedPatientCard}>
           <View style={styles.selectedPatientHeader}>
@@ -160,7 +152,6 @@ export default function SendRecommendationScreen({ navigation }) {
         </View>
       )}
 
-      {/* Patient Selection */}
       {!selectedPatient && (
         <>
           <Text style={styles.sectionTitle}>Select Patient:</Text>
@@ -187,7 +178,6 @@ export default function SendRecommendationScreen({ navigation }) {
         </>
       )}
 
-      {/* Recommendation Input */}
       {selectedPatient && (
         <>
           <Text style={styles.sectionTitle}>Your Recommendation:</Text>
@@ -205,7 +195,6 @@ export default function SendRecommendationScreen({ navigation }) {
             <Text style={styles.charCount}>{recommendation.length} characters</Text>
           </View>
 
-          {/* Quick Suggestion Templates */}
           <Text style={styles.sectionTitle}>Quick Templates:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.templatesContainer}>
             <TouchableOpacity
@@ -234,7 +223,6 @@ export default function SendRecommendationScreen({ navigation }) {
             </TouchableOpacity>
           </ScrollView>
 
-          {/* Send Button */}
           <TouchableOpacity
             style={[styles.sendButton, sending && styles.sendButtonDisabled]}
             onPress={handleSendRecommendation}

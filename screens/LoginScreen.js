@@ -1,17 +1,78 @@
-// src/screens/LoginScreen.js
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Image, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Image, KeyboardAvoidingView, ScrollView, Platform, Animated, Easing } from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { COLORS, SIZES } from '../Theme';
 import { get, ref } from 'firebase/database';
 import { Ionicons } from '@expo/vector-icons';
+import { saveToStorage, STORAGE_KEYS } from '../offlineStorage';  
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const logoScale = useRef(new Animated.Value(0)).current;
+  const logoRotate = useRef(new Animated.Value(0)).current;
+  const formSlide = useRef(new Animated.Value(50)).current;
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(logoScale, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoRotate, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.parallel([
+      Animated.timing(formSlide, {
+        toValue: 0,
+        duration: 600,
+        delay: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(formOpacity, {
+        toValue: 1,
+        duration: 600,
+        delay: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const rotate = logoRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -26,7 +87,11 @@ export default function LoginScreen({ navigation }) {
       const snapshot = await get(ref(db, `users/${user.uid}`));
       
       if (snapshot.exists()) {
-        const role = snapshot.val().role;
+        const userData = snapshot.val();
+        const role = userData.role;
+        
+        await saveToStorage(STORAGE_KEYS.USER_DATA, userData);
+        
         navigation.replace(role.toLowerCase() === 'doctor' ? 'DoctorTabs' : 'PatientTabs');
       } else {
         Alert.alert('Error', 'User data not found');
@@ -48,23 +113,37 @@ export default function LoginScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo Section */}
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="medical" size={60} color={COLORS.primary} />
-          </View>
-          <Text style={styles.logoText}>
-            Care<Text style={styles.logoTextSecondary}>Express</Text>
-          </Text>
-          <Text style={styles.tagline}>Your Health, Our Priority</Text>
+          <Animated.View
+            style={{
+              transform: [{ scale: logoScale }, { rotate }, { scale: pulseAnim }],
+            }}
+          >
+            <View style={styles.logoCircle}>
+              <Ionicons name="medical" size={60} color={COLORS.primary} />
+            </View>
+          </Animated.View>
+          <Animated.View style={{ opacity: formOpacity }}>
+            <Text style={styles.logoText}>
+              Care<Text style={styles.logoTextSecondary}>Express</Text>
+            </Text>
+            <Text style={styles.tagline}>Your Health, Our Priority</Text>
+          </Animated.View>
         </View>
 
         {/* Login Form */}
-        <View style={styles.formContainer}>
+        <Animated.View
+          style={[
+            styles.formContainer,
+            {
+              transform: [{ translateY: formSlide }],
+              opacity: formOpacity,
+            },
+          ]}
+        >
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
 
-          {/* Email Input */}
           <View style={styles.inputContainer}>
             <Ionicons name="mail-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
             <TextInput
@@ -78,7 +157,6 @@ export default function LoginScreen({ navigation }) {
             />
           </View>
 
-          {/* Password Input */}
           <View style={styles.inputContainer}>
             <Ionicons name="lock-closed-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
             <TextInput
@@ -98,7 +176,6 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Login Button */}
           <TouchableOpacity
             onPress={handleLogin}
             style={[styles.loginButton, loading && styles.loginButtonDisabled]}
@@ -107,14 +184,13 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.loginButtonText}>{loading ? 'Signing In...' : 'Login'}</Text>
           </TouchableOpacity>
 
-          {/* Register Link */}
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
               <Text style={styles.registerLink}>Register</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

@@ -1,4 +1,3 @@
-// src/screens/PaymentScreen.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
@@ -8,24 +7,20 @@ import { notifyUserByUID } from './NotificationsService';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function PaymentScreen({ route, navigation }) {
-  // ✅ Fix: safely get params
   const { totalAmount = 0, cart = [] } = route.params || {};
   
-  // Payment form states
   const [cardNumber, setCardNumber] = useState('');
   const [cardHolder, setCardHolder] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Format card number
   const formatCardNumber = (text) => {
     const cleaned = text.replace(/\s/g, '');
     const formatted = cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
     return formatted.substring(0, 19);
   };
 
-  // Format expiry date
   const formatExpiry = (text) => {
     const cleaned = text.replace(/\//g, '');
     if (cleaned.length >= 2) {
@@ -34,7 +29,6 @@ export default function PaymentScreen({ route, navigation }) {
     return cleaned;
   };
 
-  // Validate card number (basic Luhn)
   const validateCardNumber = (number) => {
     const cleaned = number.replace(/\s/g, '');
     if (cleaned.length !== 16) return false;
@@ -73,7 +67,7 @@ export default function PaymentScreen({ route, navigation }) {
     }
     const validateCardNumber = (number) => {
   const cleaned = number.replace(/\s/g, '');
-  return cleaned.length === 16; // only check length
+  return cleaned.length === 16;
 }
     if (!cardHolder || cardHolder.trim().length < 3) {
       Alert.alert('Invalid Name', 'Please enter the cardholder name (minimum 3 characters)');
@@ -107,7 +101,6 @@ export default function PaymentScreen({ route, navigation }) {
             try {
               const userId = auth.currentUser.uid;
 
-              // Save order
               const order = {
                 userId,
                 items: cart,
@@ -122,7 +115,6 @@ export default function PaymentScreen({ route, navigation }) {
 
               await push(ref(db, 'orders'), order);
 
-              // Save payment record
               const payment = {
                 amount: totalAmount,
                 cardLast4,
@@ -134,7 +126,6 @@ export default function PaymentScreen({ route, navigation }) {
 
               await push(ref(db, `payments/${userId}`), payment);
 
-              // Send notification
               await notifyUserByUID(
                 userId,
                 'Payment Successful',
@@ -143,7 +134,6 @@ export default function PaymentScreen({ route, navigation }) {
 
               setLoading(false);
 
-              // ✅ Show success alert and navigate to SearchMedicineScreen
               Alert.alert(
                 '✅ Payment Successful!',
                 `R${totalAmount} has been paid successfully!\n\nCard: •••• ${cardLast4}\nOrder Status: Processing\n\nYour medicines will be delivered soon.`,
@@ -160,7 +150,7 @@ export default function PaymentScreen({ route, navigation }) {
                 ]
               );
 
-              // Clear form
+              
               setCardNumber('');
               setCardHolder('');
               setExpiryDate('');
@@ -190,15 +180,12 @@ export default function PaymentScreen({ route, navigation }) {
           <Text style={styles.headerSubtitle}>Enter your card information</Text>
         </View>
 
-        {/* Amount to Pay */}
         <View style={styles.amountCard}>
           <Text style={styles.amountLabel}>Amount to Pay</Text>
           <Text style={styles.amountValue}>R {totalAmount}</Text>
         </View>
 
-        {/* Payment Form */}
         <View style={styles.form}>
-          {/* Card Number */}
           <Text style={styles.label}>Card Number</Text>
           <View style={styles.inputContainer}>
             <Ionicons name="card-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
@@ -216,7 +203,6 @@ export default function PaymentScreen({ route, navigation }) {
             )}
           </View>
 
-          {/* Card Holder Name */}
           <Text style={styles.label}>Cardholder Name</Text>
           <View style={styles.inputContainer}>
             <Ionicons name="person-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
@@ -230,7 +216,6 @@ export default function PaymentScreen({ route, navigation }) {
             />
           </View>
 
-          {/* Expiry Date & CVV Row */}
           <View style={styles.row}>
             <View style={styles.halfInput}>
               <Text style={styles.label}>Expiry Date</Text>
@@ -266,13 +251,11 @@ export default function PaymentScreen({ route, navigation }) {
             </View>
           </View>
 
-          {/* Security Info */}
           <View style={styles.securityInfo}>
             <Ionicons name="shield-checkmark" size={20} color={COLORS.success} />
             <Text style={styles.securityText}>Your payment information is secure and encrypted</Text>
           </View>
 
-          {/* Order Summary */}
           {cart && cart.length > 0 && (
             <View style={styles.summaryBox}>
               <Text style={styles.summaryTitle}>Order Summary</Text>
@@ -291,7 +274,6 @@ export default function PaymentScreen({ route, navigation }) {
           )}
         </View>
 
-        {/* Pay Button */}
         <TouchableOpacity
           style={[styles.payButton, loading && styles.payButtonDisabled]}
           onPress={handlePayment}
@@ -307,7 +289,6 @@ export default function PaymentScreen({ route, navigation }) {
           )}
         </TouchableOpacity>
 
-        {/* Cancel Button */}
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
@@ -322,7 +303,6 @@ export default function PaymentScreen({ route, navigation }) {
   );
 }
 
-// Styles remain unchanged
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { alignItems: 'center', padding: SIZES.padding, paddingTop: 30, backgroundColor: COLORS.card, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 3 },

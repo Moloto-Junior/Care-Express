@@ -19,13 +19,11 @@ export default function ChatScreen({ navigation }) {
     const userId = auth.currentUser.uid;
     const userRef = ref(db, `users/${userId}`);
 
-    // First fetch the current user role
     get(userRef).then(snapshot => {
       if (snapshot.exists()) {
         const role = snapshot.val().role;
         setUserRole(role);
 
-        // Now fetch all users
         const usersRef = ref(db, 'users');
         onValue(usersRef, async (snapshot) => {
           const data = snapshot.val();
@@ -33,7 +31,6 @@ export default function ChatScreen({ navigation }) {
             let chatList = [];
 
             if (role === 'Doctor') {
-              // Doctors see all patients
               chatList = Object.keys(data)
                 .filter(uid => uid !== userId && data[uid].role === 'Patient')
                 .map(uid => ({
@@ -44,7 +41,6 @@ export default function ChatScreen({ navigation }) {
                   role: data[uid].role,
                 }));
             } else {
-              // Patients see all doctors
               chatList = Object.keys(data)
                 .filter(uid => uid !== userId && data[uid].role === 'Doctor')
                 .map(uid => ({
@@ -56,7 +52,6 @@ export default function ChatScreen({ navigation }) {
                 }));
             }
 
-            // Get last messages for each chat
             const chatsWithMessages = await Promise.all(
               chatList.map(async (chat) => {
                 const chatId = createChatId(userId, chat.id);

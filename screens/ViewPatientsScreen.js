@@ -1,4 +1,3 @@
-// src/screens/ViewPatientsScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { COLORS, SIZES } from '../Theme';

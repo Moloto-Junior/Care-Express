@@ -1,4 +1,3 @@
-// src/screens/DoctorDashboard.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, ScrollView, Image, Alert } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
@@ -15,7 +14,6 @@ export default function DoctorDashboard({ navigation }) {
   const createChatId = (userId1, userId2) => [userId1, userId2].sort().join('_');
 
   useEffect(() => {
-    // Fetch all patients
     const usersRef = ref(db, 'users');
     const unsubscribePatients = onValue(usersRef, snapshot => {
       const data = snapshot.val();
@@ -29,7 +27,6 @@ export default function DoctorDashboard({ navigation }) {
       }
     });
 
-    // Fetch Doctor's Appointments
     const appointmentsRef = ref(db, 'appointments');
     const unsubscribeAppointments = onValue(appointmentsRef, async snapshot => {
       const data = snapshot.val();
@@ -134,7 +131,6 @@ export default function DoctorDashboard({ navigation }) {
         )}
       </View>
 
-      {/* PATIENTS SECTION */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Registered Patients ({patients.length})</Text>

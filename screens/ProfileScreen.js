@@ -1,4 +1,3 @@
-// src/screens/ProfileScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, Alert, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { auth, db } from '../firebaseConfig';
@@ -20,12 +19,10 @@ export default function ProfileScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
 
-  // 🔹 Doctor-specific states
   const [specialty, setSpecialty] = useState('');
   const [branch, setBranch] = useState('');
   const [verified, setVerified] = useState(false);
 
-  // 🔹 Patient-specific states
   const [age, setAge] = useState('');
   const [address, setAddress] = useState('');
   const [medicalAid, setMedicalAid] = useState(false);
@@ -49,14 +46,12 @@ export default function ProfileScreen({ navigation, route }) {
         setRole(data.role || '');
         setImage(data.profilePicture || null);
 
-        // 🔹 Set doctor-specific fields
         if (data.role === 'Doctor') {
           setSpecialty(data.specialty || '');
           setBranch(data.branch || '');
           setVerified(true);
         }
 
-        // 🔹 Set patient-specific fields
         if (data.role === 'Patient') {
           setAge(data.age || '');
           setAddress(data.address || '');
@@ -322,7 +317,6 @@ export default function ProfileScreen({ navigation, route }) {
           />
         </View>
 
-        {/* 🔹 Doctor-specific editable fields */}
         {role === 'Doctor' && (
           <>
             <Text style={styles.label}>Specialty</Text>
@@ -353,7 +347,6 @@ export default function ProfileScreen({ navigation, route }) {
               />
             </View>
 
-            {/* 🔹 Doctor info display */}
             <View style={styles.doctorInfoContainer}>
               <Text style={styles.doctorInfoText}>Specialty: {specialty}</Text>
               <Text style={styles.doctorInfoText}>Branch: {branch}</Text>
@@ -364,7 +357,6 @@ export default function ProfileScreen({ navigation, route }) {
           </>
         )}
 
-        {/* 🔹 Patient-specific fields */}
         {role === 'Patient' && (
           <>
             <Text style={styles.label}>Age</Text>

@@ -1,4 +1,3 @@
-// src/screens/DoctorTabs.js
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { COLORS } from '../Theme';
@@ -104,7 +103,7 @@ export default function DoctorTabs() {
             </View>
           ),
           tabBarLabel: 'Appointments',
-          tabBarBadge: undefined, // You can add badge count here later
+          tabBarBadge: undefined, 
         }}
       />
       <Tab.Screen

@@ -1,4 +1,3 @@
-// src/screens/DoctorProfileScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
