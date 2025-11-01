@@ -16,7 +16,7 @@ import PaymentScreen from './screens/PaymentScreen';
 import SendRecommendationScreen from './screens/SendRecommendationScreen';
 import RecommendationScreen from './screens/RecommendationScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
-import CartScreen from './screens/CartScreen';
+import CartScreen from './screens/cartScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import PatientProfile from './screens/PatientProfile';
