@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../ThemeContext';
 import { getTranslation } from '../translations';
@@ -38,6 +38,82 @@ export default function SettingsScreen({ navigation }) {
           },
         },
       ]
+    );
+  };
+
+  const handlePrivacySecurity = () => {
+    Alert.alert(
+      'Privacy & Security',
+      'Your data is encrypted and secure. We never share your information with third parties.\n\nAll your medical records, appointments, and personal information are stored securely in our database with end-to-end encryption.',
+      [{ text: 'Close', style: 'cancel' }]
+    );
+  };
+
+  const handleHelpSupport = () => {
+    Alert.alert(
+      'Help & Support',
+      'How can we help you?',
+      [
+        {
+          text: 'Contact Support',
+          onPress: () =>
+            Alert.alert(
+              'Contact Support',
+              'Email: support@careexpress.com\nPhone: +27 71 645 2095\n\nTap below to reach us directly.',
+              [
+                {
+                  text: 'Send Email',
+                  onPress: () => Linking.openURL('mailto:support@careexpress.com'),
+                },
+                {
+                  text: 'Call Support',
+                  onPress: () => Linking.openURL('tel:+27123456789'),
+                },
+                { text: 'Close', style: 'cancel' },
+              ]
+            ),
+        },
+        {
+          text: 'FAQ',
+          onPress: () =>
+            Alert.alert(
+              'FAQ',
+              '1. How do I book an appointment?\n2. How do I find doctors?\n3. Is my data secure?\n4. How do I update my profile?\n\nFor detailed answers, contact support.',
+              [{ text: 'Close', style: 'cancel' }]
+            ),
+        },
+        {
+         text: 'Close', 
+        style: 'cancel',
+      },
+        {
+          text: 'Report a Problem',
+          onPress: () =>
+            Alert.alert(
+              'Report Problem',
+              'Please email us at support@careexpress.com with details of the issue.',
+              [{ text: 'Close', style: 'cancel' }]
+            ),
+        },
+        { text: 'Close', style: 'cancel' },
+      ]
+    );
+  };
+  
+
+  const handleTermsConditions = () => {
+    Alert.alert(
+      'Terms & Conditions',
+      'CareExpress Terms of Service\n\nLast updated: January 2025\n\n1. Acceptance of Terms\n2. User Responsibilities\n3. Privacy Policy\n4. Medical Disclaimer\n5. Data Security\n\nBy using this app, you agree to our terms.',
+      [{ text: 'Close', style: 'cancel' }]
+    );
+  };
+
+  const handleAboutApp = () => {
+    Alert.alert(
+      'About CareExpress',
+      '🏥 CareExpress v1.0.0\n\nYour Complete Healthcare Solution\n\n📋 Features:\n\n👨‍⚕️ For Patients:\n• Search and order medicines with API integration\n• View registered doctors and their profiles\n• Book appointments with doctors\n• Real-time chat with healthcare providers\n• Add medicines to cart and checkout\n• Secure payment processing\n• Track delivery with map location\n• Receive notifications for orders, appointments, and deliveries\n• Upload and manage profile pictures\n\n🩺 For Doctors:\n• View and manage patient appointments\n• Chat with patients in real-time\n• Receive appointment notifications\n• View patient profiles and medical history\n• Manage professional profile with photo\n\n🔒 Security:\n• All data stored securely in Firebase database\n• End-to-end encrypted communications\n• HIPAA compliant medical records\n\n📍 Powered by:\n• Firebase Realtime Database\n• Google Maps API for delivery tracking\n• Medicine Search API\n• Secure Payment Gateway\n\n© 2025 CareExpress. All rights reserved.',
+      [{ text: 'Close', style: 'cancel' }]
     );
   };
 
@@ -224,7 +300,10 @@ export default function SettingsScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={20} color={theme.lightGray} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.settingItem, styles.settingItemLast]}>
+        <TouchableOpacity 
+          style={[styles.settingItem, styles.settingItemLast]}
+          onPress={handlePrivacySecurity}
+        >
           <View style={styles.iconContainer}>
             <Ionicons name="shield-checkmark" size={20} color={theme.primary} />
           </View>
@@ -235,7 +314,10 @@ export default function SettingsScreen({ navigation }) {
 
       <Text style={styles.sectionTitle}>ABOUT</Text>
       <View style={styles.section}>
-        <TouchableOpacity style={[styles.settingItem]}>
+        <TouchableOpacity 
+          style={[styles.settingItem]}
+          onPress={handleHelpSupport}
+        >
           <View style={styles.iconContainer}>
             <Ionicons name="help-circle" size={20} color={theme.primary} />
           </View>
@@ -243,7 +325,10 @@ export default function SettingsScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={20} color={theme.lightGray} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.settingItem]}>
+        <TouchableOpacity 
+          style={[styles.settingItem]}
+          onPress={handleTermsConditions}
+        >
           <View style={styles.iconContainer}>
             <Ionicons name="document-text" size={20} color={theme.primary} />
           </View>
@@ -251,12 +336,16 @@ export default function SettingsScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={20} color={theme.lightGray} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.settingItem, styles.settingItemLast]}>
+        <TouchableOpacity 
+          style={[styles.settingItem, styles.settingItemLast]}
+          onPress={handleAboutApp}
+        >
           <View style={styles.iconContainer}>
             <Ionicons name="information-circle" size={20} color={theme.primary} />
           </View>
           <Text style={styles.settingText}>About App</Text>
           <Text style={styles.settingValue}>v1.0.0</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.lightGray} />
         </TouchableOpacity>
       </View>
 
