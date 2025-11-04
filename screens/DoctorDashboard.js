@@ -111,7 +111,6 @@ export default function DoctorDashboard({ navigation }) {
       <Text style={styles.greeting}>Welcome, Dr. {auth.currentUser.email.split('@')[0]}</Text>
       <Text style={styles.subtitle}>Your dashboard overview</Text>
 
-      {/* UPCOMING APPOINTMENTS SECTION */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Upcoming Appointments ({appointments.length})</Text>

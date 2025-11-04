@@ -6,13 +6,27 @@ import DoctorDashboard from './DoctorDashboard';
 import ViewAppointmentsScreen from './ViewAppointmentsScreen';
 import ChatScreen from './ChatScreen';
 import ProfileScreen from './ProfileScreen';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, StyleSheet, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useNotifications } from '../NotificationContext';
 
 const Tab = createBottomTabNavigator();
 
+const BadgeComponent = ({ count }) => {
+  if (count === 0) return null;
+  
+  return (
+    <View style={styles.tabBadge}>
+      <Text style={styles.tabBadgeText}>
+        {count > 99 ? '99+' : count.toString()}
+      </Text>
+    </View>
+  );
+};
+
 export default function DoctorTabs() {
   const navigation = useNavigation();
+  const { unreadCounts, markAsRead } = useNotifications();
 
   return (
     <Tab.Navigator
@@ -80,6 +94,9 @@ export default function DoctorTabs() {
       <Tab.Screen
         name="Appointments"
         component={ViewAppointmentsScreen}
+        listeners={{
+          tabPress: () => markAsRead('appointments'),
+        }}
         options={{
           headerShown: true,
           headerTitle: 'My Appointments',
@@ -100,15 +117,18 @@ export default function DoctorTabs() {
                 size={focused ? 28 : 24}
                 color={color}
               />
+              <BadgeComponent count={unreadCounts.appointments} />
             </View>
           ),
           tabBarLabel: 'Appointments',
-          tabBarBadge: undefined, 
         }}
       />
       <Tab.Screen
         name="Chat"
         component={ChatScreen}
+        listeners={{
+          tabPress: () => markAsRead('chats'),
+        }}
         options={{
           headerShown: true,
           headerTitle: 'Patient Chats',
@@ -129,6 +149,7 @@ export default function DoctorTabs() {
                 size={focused ? 28 : 24}
                 color={color}
               />
+              <BadgeComponent count={unreadCounts.chats} />
             </View>
           ),
           tabBarLabel: 'Chats',
@@ -152,11 +173,20 @@ export default function DoctorTabs() {
           },
           headerRight: () => (
             <TouchableOpacity
-              onPress={() => navigation.navigate('Notifications')}
+              onPress={() => {
+                markAsRead('notifications');
+                navigation.navigate('Notifications');
+              }}
               style={styles.headerButton}
             >
               <Ionicons name="notifications" size={24} color="#fff" />
-              <View style={styles.notificationBadge} />
+              {unreadCounts.notifications > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadCounts.notifications > 99 ? '99+' : unreadCounts.notifications.toString()}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           ),
           tabBarIcon: ({ color, size, focused }) => (
@@ -182,14 +212,41 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    top: -5,
+    right: -5,
     backgroundColor: COLORS.secondary,
-    borderWidth: 1,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
     borderColor: COLORS.primary,
+  },
+  notificationBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.card,
+  },
+  tabBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   iconContainer: {
     justifyContent: 'center',
@@ -197,6 +254,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 35,
     borderRadius: 10,
+    position: 'relative',
   },
   iconContainerFocused: {
     backgroundColor: `${COLORS.primary}15`,

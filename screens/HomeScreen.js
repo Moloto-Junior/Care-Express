@@ -11,6 +11,7 @@ export default function HomeScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [doctors, setDoctors] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0); 
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -38,9 +39,27 @@ export default function HomeScreen({ navigation }) {
         const doctorList = Object.keys(data)
           .filter(uid => data[uid].role === 'Doctor')
           .map(uid => ({ id: uid, ...data[uid] }));
-        setDoctors(doctorList.slice(0, 3)); 
+        setDoctors(doctorList.slice(0, 3));
       }
     });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const notificationsRef = ref(db, `notifications/${userId}`);
+    const unsubscribe = onValue(notificationsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const unread = Object.values(data).filter(n => !n.read).length;
+        setUnreadCount(unread);
+      } else {
+        setUnreadCount(0);
+      }
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -67,37 +86,35 @@ export default function HomeScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-const renderDoctor = (doctor) => (
-  <TouchableOpacity 
-    key={doctor.id} 
-    style={styles.doctorCard}
-    onPress={() => navigation.navigate('DoctorProfile', { doctorId: doctor.id })}
-  >
-    <View style={styles.doctorAvatar}>
-      {doctor.profilePicture ? (
-        <Image 
-          source={{ uri: doctor.profilePicture }} 
-          style={{ width: 60, height: 60, borderRadius: 30 }} 
-        />
-      ) : (
-        <Ionicons name="person" size={30} color={COLORS.primary} />
-      )}
-    </View>
-    <View style={styles.doctorInfo}>
-      <Text style={styles.doctorName}>Dr. {doctor.name}</Text>
-      <Text style={styles.doctorSpecialty}>{doctor.specialty || 'General Practice'}</Text>
-      <View style={styles.ratingContainer}>
-        <Ionicons name="star" size={14} color="#FFC107" />
-        <Text style={styles.ratingText}>4.8</Text>
+  const renderDoctor = (doctor) => (
+    <TouchableOpacity 
+      key={doctor.id} 
+      style={styles.doctorCard}
+      onPress={() => navigation.navigate('DoctorProfile', { doctorId: doctor.id })}
+    >
+      <View style={styles.doctorAvatar}>
+        {doctor.profilePicture ? (
+          <Image 
+            source={{ uri: doctor.profilePicture }} 
+            style={{ width: 60, height: 60, borderRadius: 30 }} 
+          />
+        ) : (
+          <Ionicons name="person" size={30} color={COLORS.primary} />
+        )}
       </View>
-    </View>
-    <TouchableOpacity style={styles.bookIcon} onPress={() => navigation.navigate('BookAppointment')}>
-      <Ionicons name="calendar" size={24} color={COLORS.primary} />
+      <View style={styles.doctorInfo}>
+        <Text style={styles.doctorName}>Dr. {doctor.name}</Text>
+        <Text style={styles.doctorSpecialty}>{doctor.specialty || 'General Practice'}</Text>
+        <View style={styles.ratingContainer}>
+          <Ionicons name="star" size={14} color="#FFC107" />
+          <Text style={styles.ratingText}>4.8</Text>
+        </View>
+      </View>
+      <TouchableOpacity style={styles.bookIcon} onPress={() => navigation.navigate('BookAppointment')}>
+        <Ionicons name="calendar" size={24} color={COLORS.primary} />
+      </TouchableOpacity>
     </TouchableOpacity>
-  </TouchableOpacity>
-);
-
-  
+  );
 
   if (loading) {
     return (
@@ -118,8 +135,12 @@ const renderDoctor = (doctor) => (
           <Text style={styles.subtext}>How can we help you today?</Text>
         </View>
         <TouchableOpacity style={styles.notificationButton} onPress={() => navigation.navigate('Notifications')}>
-          <Ionicons name="notifications" size={24} color={COLORS.primary} />
-          <View style={styles.notificationBadge} />
+          <Ionicons name="notifications" size={28} color={COLORS.primary} />
+          {unreadCount > 0 && (
+            <View style={styles.notificationCountContainer}>
+              <Text style={styles.notificationCountText}>{unreadCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -164,7 +185,23 @@ const styles = StyleSheet.create({
   userName: { fontWeight: '700', color: COLORS.primary },
   subtext: { fontSize: 14, color: COLORS.lightGray, marginTop: 5 },
   notificationButton: { position: 'relative' },
-  notificationBadge: { position: 'absolute', top: 0, right: 0, width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.secondary },
+  notificationCountContainer: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+  notificationCountText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
   quickActions: { marginBottom: 25 },
   card: { backgroundColor: COLORS.card, borderRadius: SIZES.radius, padding: 20, marginBottom: 12, flexDirection: 'row', alignItems: 'center', shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84, elevation: 5 },
   cardIcon: { marginRight: 15 },
@@ -186,4 +223,3 @@ const styles = StyleSheet.create({
   tipTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },
   tipText: { fontSize: 14, color: COLORS.lightGray, marginTop: 2 },
 });
- 

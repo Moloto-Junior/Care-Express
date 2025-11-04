@@ -1,23 +1,49 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, FlatList, Text, KeyboardAvoidingView, StyleSheet, Platform, Image } from 'react-native';
+import { View, TextInput, TouchableOpacity, FlatList, Text, KeyboardAvoidingView, StyleSheet, Platform, Alert } from 'react-native';
 import { db, auth } from '../firebaseConfig';
-import { ref, push, onValue, update, serverTimestamp } from 'firebase/database';
+import { ref, push, onValue, update } from 'firebase/database';
 import { COLORS, SIZES } from '../Theme';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function IndividualChatScreen({ route }) {
+export default function IndividualChatScreen({ route, navigation }) {
   const { chatId, recipientId, recipientName } = route.params;
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const flatListRef = useRef();
 
+  // Mark unread messages as read when opening the chat
+  const markMessagesAsRead = async (msgs) => {
+    const updates = {};
+    msgs.forEach(msg => {
+      if (!msg.read && msg.sender !== auth.currentUser.uid) {
+        updates[`chats/${chatId}/messages/${msg.id}/read`] = true;
+      }
+    });
+    if (Object.keys(updates).length > 0) {
+      await update(ref(db), updates);
+    }
+  };
+
   useEffect(() => {
+    navigation.setOptions({
+      title: recipientName,
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={clearChat}
+          style={{ marginRight: 15 }}
+        >
+          <Text style={{ color: COLORS.secondary, fontWeight: 'bold' }}>Clear Chat</Text>
+        </TouchableOpacity>
+      )
+    });
+
     const messagesRef = ref(db, `chats/${chatId}/messages`);
     const unsubscribe = onValue(messagesRef, snapshot => {
       const data = snapshot.val() || {};
       const messagesArray = Object.keys(data).map(id => ({ id, ...data[id] }));
       messagesArray.sort((a, b) => a.timestamp - b.timestamp);
       setMessages(messagesArray);
+      markMessagesAsRead(messagesArray); // Mark unread messages as read
     });
 
     return () => unsubscribe();
@@ -31,6 +57,7 @@ export default function IndividualChatScreen({ route }) {
       sender: auth.currentUser.uid,
       text: text.trim(),
       timestamp: Date.now(),
+      read: false,
     };
 
     try {
@@ -51,6 +78,21 @@ export default function IndividualChatScreen({ route }) {
     } catch (error) {
       console.log('Send message error:', error);
     }
+  };
+
+  const clearChat = () => {
+    Alert.alert(
+      'Clear Chat',
+      'Are you sure you want to delete all messages?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Yes', onPress: async () => {
+            await update(ref(db, `chats/${chatId}`), { messages: {} });
+            setMessages([]);
+          }
+        }
+      ]
+    );
   };
 
   const formatTime = (timestamp) => {
@@ -123,107 +165,25 @@ export default function IndividualChatScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SIZES.padding,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginTop: 15,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-    marginTop: 5,
-  },
-  messagesList: {
-    padding: 15,
-    paddingBottom: 10,
-  },
-  messageContainer: {
-    marginBottom: 12,
-    maxWidth: '75%',
-  },
-  myMessageContainer: {
-    alignSelf: 'flex-end',
-  },
-  theirMessageContainer: {
-    alignSelf: 'flex-start',
-  },
-  messageBubble: {
-    padding: 12,
-    borderRadius: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  myMessage: {
-    backgroundColor: COLORS.primary,
-    borderBottomRightRadius: 4,
-  },
-  theirMessage: {
-    backgroundColor: COLORS.card,
-    borderBottomLeftRadius: 4,
-  },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  myMessageText: {
-    color: 'white',
-  },
-  theirMessageText: {
-    color: COLORS.text,
-  },
-  timeText: {
-    fontSize: 10,
-    marginTop: 4,
-    alignSelf: 'flex-end',
-  },
-  myTimeText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  theirTimeText: {
-    color: COLORS.lightGray,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 10,
-    backgroundColor: COLORS.card,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.background,
-    alignItems: 'flex-end',
-  },
-  input: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    borderRadius: 25,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: COLORS.text,
-    maxHeight: 100,
-    marginRight: 10,
-  },
-  sendButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 25,
-    width: 45,
-    height: 45,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: COLORS.lightGray,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SIZES.padding },
+  emptyText: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, marginTop: 15 },
+  emptySubText: { fontSize: 14, color: COLORS.lightGray, marginTop: 5 },
+  messagesList: { padding: 15, paddingBottom: 10 },
+  messageContainer: { marginBottom: 12, maxWidth: '75%' },
+  myMessageContainer: { alignSelf: 'flex-end' },
+  theirMessageContainer: { alignSelf: 'flex-start' },
+  messageBubble: { padding: 12, borderRadius: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  myMessage: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
+  theirMessage: { backgroundColor: COLORS.card, borderBottomLeftRadius: 4 },
+  messageText: { fontSize: 15, lineHeight: 20 },
+  myMessageText: { color: 'white' },
+  theirMessageText: { color: COLORS.text },
+  timeText: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end' },
+  myTimeText: { color: 'rgba(255, 255, 255, 0.7)' },
+  theirTimeText: { color: COLORS.lightGray },
+  inputContainer: { flexDirection: 'row', padding: 10, backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.background, alignItems: 'flex-end' },
+  input: { flex: 1, backgroundColor: COLORS.background, borderRadius: 25, paddingHorizontal: 18, paddingVertical: 10, fontSize: 15, color: COLORS.text, maxHeight: 100, marginRight: 10 },
+  sendButton: { backgroundColor: COLORS.primary, borderRadius: 25, width: 45, height: 45, justifyContent: 'center', alignItems: 'center' },
+  sendButtonDisabled: { backgroundColor: COLORS.lightGray },
 });

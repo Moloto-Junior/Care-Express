@@ -5,9 +5,10 @@ import { db, auth } from '../firebaseConfig';
 import { ref, onValue, update, remove } from 'firebase/database';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function NotificationsScreen() {
+export default function NotificationsScreen({ route }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const notificationsRef = ref(db, `notifications/${auth.currentUser.uid}`);
@@ -18,8 +19,12 @@ export default function NotificationsScreen() {
           .map(id => ({ id, ...data[id] }))
           .sort((a, b) => b.timestamp - a.timestamp);
         setNotifications(list);
+
+        const unread = list.filter(n => !n.read).length;
+        setUnreadCount(unread);
       } else {
         setNotifications([]);
+        setUnreadCount(0);
       }
       setLoading(false);
     });
@@ -29,6 +34,7 @@ export default function NotificationsScreen() {
   const markAsRead = async (id) => {
     try {
       await update(ref(db, `notifications/${auth.currentUser.uid}/${id}`), { read: true });
+      setUnreadCount(prev => (prev > 0 ? prev - 1 : 0));
     } catch (error) {
       console.log('Error marking as read:', error);
     }
@@ -45,6 +51,7 @@ export default function NotificationsScreen() {
   const clearAll = async () => {
     try {
       await remove(ref(db, `notifications/${auth.currentUser.uid}`));
+      setUnreadCount(0);
     } catch (error) {
       console.log('Error clearing notifications:', error);
     }
@@ -92,9 +99,19 @@ export default function NotificationsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          Notifications ({notifications.filter(n => !n.read).length})
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={styles.bellContainer}>
+            <Ionicons name="notifications-outline" size={26} color={COLORS.text} />
+            {unreadCount > 0 && (
+              <View style={styles.badgeOutside}>
+                <Text style={styles.badgeText}>{unreadCount}</Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.headerTitle}>Notifications</Text>
+        </View>
+
         {notifications.length > 0 && (
           <TouchableOpacity onPress={clearAll}>
             <Text style={styles.clearText}>Clear All</Text>
@@ -187,11 +204,33 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
+    marginLeft: 10,
   },
   clearText: {
     color: COLORS.secondary,
     fontSize: 14,
     fontWeight: '600',
+  },
+  bellContainer: {
+    position: 'relative',
+  },
+  badgeOutside: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    zIndex: 1,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: 'bold',
   },
   notificationCard: {
     flexDirection: 'row',

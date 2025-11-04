@@ -1,4 +1,3 @@
-// src/screens/ChatScreen.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { auth, db } from '../firebaseConfig';
@@ -10,6 +9,7 @@ export default function ChatScreen({ navigation }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  const [unreadChats, setUnreadChats] = useState(0); 
 
   const createChatId = (userId1, userId2) => {
     return [userId1, userId2].sort().join('_');
@@ -59,6 +59,7 @@ export default function ChatScreen({ navigation }) {
                 
                 let lastMessage = 'No messages yet';
                 let timestamp = 0;
+                let unread = 0;
 
                 try {
                   const snapshot = await get(messagesRef);
@@ -71,20 +72,25 @@ export default function ChatScreen({ navigation }) {
                     if (messages.length > 0) {
                       lastMessage = messages[0].text;
                       timestamp = messages[0].timestamp;
+                      unread = messages.filter(m => !m.read && m.senderId !== userId).length;
                     }
                   }
                 } catch (error) {
                   console.log('Error fetching messages:', error);
                 }
 
-                return { ...chat, lastMessage, timestamp };
+                return { ...chat, lastMessage, timestamp, unread };
               })
             );
 
             chatsWithMessages.sort((a, b) => b.timestamp - a.timestamp);
             setChats(chatsWithMessages);
+
+            const totalUnread = chatsWithMessages.reduce((sum, c) => sum + (c.unread > 0 ? 1 : 0), 0);
+            setUnreadChats(totalUnread);
           } else {
             setChats([]);
+            setUnreadChats(0);
           }
           setLoading(false);
         });
@@ -143,7 +149,7 @@ export default function ChatScreen({ navigation }) {
                   />
                 </View>
               )}
-              <View style={[styles.statusDot, { backgroundColor: COLORS.success }]} />
+              <View style={[styles.statusDot, { backgroundColor: item.unread > 0 ? 'red' : COLORS.success }]} />
             </View>
             
             <View style={styles.chatInfo}>
