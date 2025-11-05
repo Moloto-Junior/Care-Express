@@ -22,10 +22,13 @@ import ProfileScreen from './screens/ProfileScreen';
 import PatientProfile from './screens/PatientProfile';
 import SearchMedicineScreen from './screens/SearchMedicineScreen';
 import ViewProfileScreen from './screens/ViewProfileScreen'; 
+import DoctorListScreen from './screens/DoctorListScreen';
 import DoctorSelectionScreen from './screens/DoctorSelectionScreen';
-import { auth } from './firebaseConfig';
+import MedicineCheckoutScreen from './screens/MedicineCheckoutScreen';
+import ConsultationPaymentScreen from './screens/ConsultationPaymentScreen';
 import SetConsultationFeeScreen from './screens/SetConsultationFeeScreen';
-import AllDoctorsScreen from './screens/AllDoctorsScreen';
+import { auth } from './firebaseConfig';
+
 const Stack = createNativeStackNavigator();
 
 const handleLogout = (navigation) => {
@@ -72,36 +75,58 @@ export default function AppNavigator() {
             )
           })}
         />
+
         <Stack.Screen
-  name="DoctorProfile"
-  component={DoctorProfileScreen}
-  options={{
-    headerShown: true,
-    title: 'Doctor Profile',
-    headerStyle: { backgroundColor: COLORS.primary },
-    headerTintColor: '#fff',
-  }}
-/>
-<Stack.Screen 
-  name="PatientProfile" 
-  component={PatientProfile} 
-  options={{ title: 'Patient Profile' }} 
-/>
-<Stack.Screen 
-  name="SetConsultationFee" 
-  component={SetConsultationFeeScreen} 
-  options={{ 
-    headerShown: true, 
-    title: 'Set Consultation Fees',
-    headerStyle: { backgroundColor: COLORS.primary },
-    headerTintColor: '#fff',
-  }} 
-/>
-<Stack.Screen 
-  name="AllDoctors" 
-  component={AllDoctorsScreen} 
+          name="DoctorProfile"
+          component={DoctorProfileScreen}
+          options={{
+            headerShown: true,
+            title: 'Doctor Profile',
+            headerStyle: { backgroundColor: COLORS.primary },
+            headerTintColor: '#fff',
+          }}
+        />
+
+        <Stack.Screen 
+          name="PatientProfile" 
+          component={PatientProfile} 
+          options={{ title: 'Patient Profile' }} 
+        />
+        <Stack.Screen 
+  name="MedicineCheckout" 
+  component={MedicineCheckoutScreen} 
   options={{ headerShown: false }}
 />
+
+        <Stack.Screen 
+          name="SetConsultationFee" 
+          component={SetConsultationFeeScreen} 
+          options={{ 
+            headerShown: true, 
+            title: 'Set Consultation Fees',
+            headerStyle: { backgroundColor: COLORS.primary },
+            headerTintColor: '#fff',
+          }} 
+        />
+
+        <Stack.Screen 
+          name="DoctorSelection" 
+          component={DoctorSelectionScreen} 
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen 
+          name="AllDoctors" 
+          component={DoctorListScreen} 
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen 
+          name="ConsultationPayment" 
+          component={ConsultationPaymentScreen} 
+          options={{ headerShown: false }}
+        />
+
         <Stack.Screen 
           name="PatientTabs" 
           component={PatientTabs}
@@ -126,15 +151,6 @@ export default function AppNavigator() {
             headerTintColor: '#fff',
           }}
         />
-        <Stack.Screen 
-  name="DoctorSelection" 
-  component={DoctorSelectionScreen} 
-  options={{ 
-    title: "Select Doctor",
-    headerShown: false  
-  }}
-/>
-
 
         <Stack.Screen
           name="SearchMedicine"

@@ -1,355 +1,315 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, ScrollView } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
-import { db, auth } from '../firebaseConfig';
-import { ref, onValue, update, remove } from 'firebase/database';
 import { Ionicons } from '@expo/vector-icons';
+import { auth, db } from '../firebaseConfig';
+import { ref, onValue, set } from 'firebase/database';
 
-
-export default function NotificationsScreen({ route }) {
+export default function NotificationsScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const getConsultationTypeIcon = (t) => (t === 'home' ? 'home' : 'medical');
-  const getConsultationTypeColor = (t) => (t === 'home' ? '#FF6B6B' : COLORS.primary);
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [showFullNotification, setShowFullNotification] = useState(false);
 
   useEffect(() => {
-    const notificationsRef = ref(db, `notifications/${auth.currentUser.uid}`);
-    const unsubscribe = onValue(notificationsRef, snapshot => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
+    const notificationsRef = ref(db, `notifications/${userId}`);
+    const unsubscribe = onValue(notificationsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const list = Object.keys(data)
-          .map(id => ({ id, ...data[id] }))
+        const notificationList = Object.values(data)
           .sort((a, b) => b.timestamp - a.timestamp);
-        setNotifications(list);
-
-
-        const unread = list.filter(n => !n.read).length;
-        setUnreadCount(unread);
+        setNotifications(notificationList);
       } else {
         setNotifications([]);
-        setUnreadCount(0);
       }
       setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
+  const markAsRead = async (notification) => {
+    if (notification.read) return;
 
-  const markAsRead = async (id) => {
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
     try {
-      await update(ref(db, `notifications/${auth.currentUser.uid}/${id}`), { read: true });
-      setUnreadCount(prev => (prev > 0 ? prev - 1 : 0));
+      await set(ref(db, `notifications/${userId}/${notification.id}/read`), true);
     } catch (error) {
-      console.log('Error marking as read:', error);
+      console.error('Error marking notification as read:', error);
     }
   };
 
+  const openNotification = (notification) => {
+    setSelectedNotification(notification);
+    setShowFullNotification(true);
+    markAsRead(notification);
 
-  const deleteNotification = async (id) => {
-    try {
-      await remove(ref(db, `notifications/${auth.currentUser.uid}/${id}`));
-    } catch (error) {
-      console.log('Error deleting notification:', error);
+    // Handle specific notification actions
+    if (notification.type === 'appointment_request') {
+      // Navigate to appointment confirmation screen for doctors
+      navigation.navigate('AppointmentConfirmation', {
+        appointmentId: notification.appointmentId,
+        appointment: notification,
+        notificationId: notification.id
+      });
     }
   };
 
-
-  const clearAll = async () => {
-    try {
-      await remove(ref(db, `notifications/${auth.currentUser.uid}`));
-      setUnreadCount(0);
-    } catch (error) {
-      console.log('Error clearing notifications:', error);
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'appointment_pending': return 'time';
+      case 'appointment_confirmed': return 'checkmark-circle';
+      case 'appointment_declined': return 'close-circle';
+      case 'appointment_request': return 'calendar';
+      default: return 'notifications';
     }
   };
 
-
-  const formatTime = (timestamp) => {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
-  };
-
-
-  const getNotificationIcon = (item) => {
-    if (item.consultationType) {
-      return getConsultationTypeIcon(item.consultationType);
+  const getNotificationColor = (type) => {
+    switch (type) {
+      case 'appointment_pending': return '#FFA500';
+      case 'appointment_confirmed': return COLORS.success;
+      case 'appointment_declined': return COLORS.secondary;
+      case 'appointment_request': return COLORS.primary;
+      default: return COLORS.lightGray;
     }
-    if (item.title.includes('Payment')) return 'card';
-    if (item.title.includes('Appointment')) return 'calendar';
-    if (item.title.includes('Order')) return 'cube';
-    if (item.title.includes('Recommendation')) return 'medical';
-    return 'notifications';
   };
 
-  const getNotificationColor = (item) => {
-    if (item.consultationType) {
-      return getConsultationTypeColor(item.consultationType);
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
     }
-    return !item.read ? COLORS.primary : COLORS.lightGray;
   };
 
+  const renderNotification = ({ item }) => (
+    <TouchableOpacity 
+      style={[
+        styles.notificationCard,
+        !item.read && styles.unreadNotification
+      ]} 
+      onPress={() => openNotification(item)}
+    >
+      <View style={styles.notificationContent}>
+        <View style={[
+          styles.notificationIcon,
+          { backgroundColor: getNotificationColor(item.type) + '20' }
+        ]}>
+          <Ionicons 
+            name={getNotificationIcon(item.type)} 
+            size={24} 
+            color={getNotificationColor(item.type)} 
+          />
+        </View>
+
+        <View style={styles.notificationText}>
+          <Text style={[
+            styles.notificationTitle,
+            !item.read && styles.unreadTitle
+          ]}>
+            {item.title}
+          </Text>
+          <Text 
+            style={styles.notificationMessage} 
+            numberOfLines={2}
+          >
+            {item.message}
+          </Text>
+          <Text style={styles.notificationTime}>
+            {formatDate(item.timestamp)}
+          </Text>
+        </View>
+
+        {!item.read && <View style={styles.unreadDot} />}
+      </View>
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingText}>Loading notifications...</Text>
       </View>
     );
   }
-
-
-  if (notifications.length === 0) {
-    return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="notifications-off-outline" size={80} color={COLORS.lightGray} />
-        <Text style={styles.emptyText}>No Notifications</Text>
-        <Text style={styles.emptySubText}>You're all caught up!</Text>
-      </View>
-    );
-  }
-
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View style={styles.bellContainer}>
-            <Ionicons name="notifications-outline" size={26} color={COLORS.text} />
-            {unreadCount > 0 && (
-              <View style={styles.badgeOutside}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
-              </View>
-            )}
-          </View>
-
-
-          <Text style={styles.headerTitle}>Notifications</Text>
-        </View>
-
-
-        {notifications.length > 0 && (
-          <TouchableOpacity onPress={clearAll}>
-            <Text style={styles.clearText}>Clear All</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.screenTitle}>Notifications</Text>
+        <Text style={styles.notificationCount}>
+          {notifications.filter(n => !n.read).length} new
+        </Text>
       </View>
 
+      {notifications.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="notifications-off" size={80} color={COLORS.lightGray} />
+          <Text style={styles.emptyTitle}>No notifications yet</Text>
+          <Text style={styles.emptyMessage}>
+            You'll receive notifications about appointments and other updates here.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          renderItem={renderNotification}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContainer}
+        />
+      )}
 
-      <FlatList
-        data={notifications}
-        keyExtractor={item => item.id}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.notificationCard, !item.read && styles.unreadCard]}
-            onPress={() => markAsRead(item.id)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconContainer, !item.read && styles.unreadIconContainer]}>
-              <Ionicons 
-                name={getNotificationIcon(item)} 
-                size={24} 
-                color={getNotificationColor(item)} 
-              />
-            </View>
+      <Modal visible={showFullNotification} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowFullNotification(false)}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Notification Details</Text>
+            <View />
+          </View>
 
-
-            <View style={styles.notificationContent}>
-              <Text style={[styles.notificationTitle, !item.read && styles.unreadTitle]}>
-                {item.title}
-              </Text>
-              <Text style={styles.notificationMessage} numberOfLines={2}>
-                {item.message}
-              </Text>
-              <View style={styles.metaRow}>
-                <Text style={styles.notificationTime}>{formatTime(item.timestamp)}</Text>
-                {item.consultationType && (
-                  <View style={[styles.typeBadge, { backgroundColor: getConsultationTypeColor(item.consultationType) + '20' }]}>
-                    <Text style={[styles.typeText, { color: getConsultationTypeColor(item.consultationType) }]}>
-                      {item.consultationType === 'home' ? 'Home Visit' : 'Clinic'}
+          {selectedNotification && (
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.fullNotificationCard}>
+                <View style={styles.fullNotificationHeader}>
+                  <View style={[
+                    styles.fullNotificationIcon,
+                    { backgroundColor: getNotificationColor(selectedNotification.type) + '20' }
+                  ]}>
+                    <Ionicons 
+                      name={getNotificationIcon(selectedNotification.type)} 
+                      size={32} 
+                      color={getNotificationColor(selectedNotification.type)} 
+                    />
+                  </View>
+                  <View style={styles.fullNotificationTitleContainer}>
+                    <Text style={styles.fullNotificationTitle}>
+                      {selectedNotification.title}
                     </Text>
+                    <Text style={styles.fullNotificationTime}>
+                      {formatDate(selectedNotification.timestamp)}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.fullNotificationMessage}>
+                  {selectedNotification.message}
+                </Text>
+
+                {/* Show additional details for appointment notifications */}
+                {(selectedNotification.appointmentDate || selectedNotification.consultationType) && (
+                  <View style={styles.appointmentDetails}>
+                    <Text style={styles.detailsTitle}>Appointment Details:</Text>
+                    
+                    {selectedNotification.doctorName && (
+                      <View style={styles.detailRow}>
+                        <Ionicons name="person" size={16} color={COLORS.text} />
+                        <Text style={styles.detailText}>Doctor: {selectedNotification.doctorName}</Text>
+                      </View>
+                    )}
+
+                    {selectedNotification.consultationType && (
+                      <View style={styles.detailRow}>
+                        <Ionicons name={selectedNotification.consultationType === 'home' ? 'home' : 'business'} size={16} color={COLORS.text} />
+                        <Text style={styles.detailText}>
+                          Type: {selectedNotification.consultationType === 'home' ? 'Home Visit' : 'Clinic Visit'}
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedNotification.appointmentDate && (
+                      <View style={styles.detailRow}>
+                        <Ionicons name="calendar" size={16} color={COLORS.text} />
+                        <Text style={styles.detailText}>Date: {selectedNotification.appointmentDate}</Text>
+                      </View>
+                    )}
+
+                    {selectedNotification.appointmentTime && (
+                      <View style={styles.detailRow}>
+                        <Ionicons name="time" size={16} color={COLORS.text} />
+                        <Text style={styles.detailText}>Time: {selectedNotification.appointmentTime}</Text>
+                      </View>
+                    )}
+
+                    {selectedNotification.totalAmount && (
+                      <View style={styles.detailRow}>
+                        <Ionicons name="cash" size={16} color={COLORS.text} />
+                        <Text style={styles.detailText}>Total: R{selectedNotification.totalAmount}</Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
-            </View>
-
-
-            <TouchableOpacity
-              onPress={() => deleteNotification(item.id)}
-              style={styles.deleteButton}
-            >
-              <Ionicons name="trash-outline" size={20} color={COLORS.secondary} />
-            </TouchableOpacity>
-
-
-            {!item.read && <View style={styles.unreadDot} />}
-          </TouchableOpacity>
-        )}
-      />
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-    padding: SIZES.padding,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginTop: 20,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-    marginTop: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SIZES.padding,
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.background,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginLeft: 10,
-  },
-  clearText: {
-    color: COLORS.secondary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  bellContainer: {
-    position: 'relative',
-  },
-  badgeOutside: {
-    position: 'absolute',
-    top: -4,
-    right: -6,
-    backgroundColor: 'red',
-    borderRadius: 10,
-    minWidth: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    zIndex: 1,
-  },
-  badgeText: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  notificationCard: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.card,
-    padding: 15,
-    marginHorizontal: SIZES.padding,
-    marginTop: 10,
-    borderRadius: SIZES.radius,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  unreadCard: {
-    backgroundColor: '#E3F2FD',
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-  },
-  iconContainer: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  unreadIconContainer: {
-    backgroundColor: '#BBDEFB',
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  unreadTitle: {
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  notificationMessage: {
-    fontSize: 14,
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  notificationTime: {
-    fontSize: 12,
-    color: COLORS.lightGray,
-  },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  typeText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  unreadDot: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.primary,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 10, fontSize: 16, color: COLORS.text },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.background },
+  screenTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.text },
+  notificationCount: { fontSize: 14, color: COLORS.primary, fontWeight: '600' },
+  listContainer: { padding: 15 },
+  notificationCard: { backgroundColor: COLORS.card, borderRadius: SIZES.radius, padding: 15, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  unreadNotification: { borderLeftWidth: 4, borderLeftColor: COLORS.primary },
+  notificationContent: { flexDirection: 'row', alignItems: 'flex-start' },
+  notificationIcon: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  notificationText: { flex: 1 },
+  notificationTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: 4 },
+  unreadTitle: { fontWeight: 'bold' },
+  notificationMessage: { fontSize: 14, color: COLORS.lightGray, lineHeight: 20, marginBottom: 8 },
+  notificationTime: { fontSize: 12, color: COLORS.lightGray },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary, marginLeft: 8 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 50 },
+  emptyTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginTop: 20 },
+  emptyMessage: { fontSize: 14, color: COLORS.lightGray, textAlign: 'center', marginTop: 10, lineHeight: 20 },
+  modalContainer: { flex: 1, backgroundColor: COLORS.background },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.background },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
+  modalContent: { flex: 1, padding: 20 },
+  fullNotificationCard: { backgroundColor: COLORS.card, borderRadius: SIZES.radius, padding: 20 },
+  fullNotificationHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
+  fullNotificationIcon: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  fullNotificationTitleContainer: { flex: 1 },
+  fullNotificationTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 5 },
+  fullNotificationTime: { fontSize: 14, color: COLORS.lightGray },
+  fullNotificationMessage: { fontSize: 16, color: COLORS.text, lineHeight: 24, marginBottom: 20 },
+  appointmentDetails: { backgroundColor: COLORS.background, padding: 15, borderRadius: SIZES.radius },
+  detailsTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text, marginBottom: 15 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  detailText: { fontSize: 14, color: COLORS.text, marginLeft: 10 },
 });

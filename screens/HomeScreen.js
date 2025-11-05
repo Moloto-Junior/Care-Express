@@ -64,7 +64,7 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   const features = [
-    { name: 'Book Appointment', icon: 'calendar-plus', screen: 'BookAppointment', color: COLORS.primary },
+    { name: 'Book Appointment', icon: 'calendar-plus', screen: 'DoctorSelection', color: COLORS.primary },
     { name: 'Medicine Store', icon: 'medical', screen: 'Medicine', color: COLORS.success },
     { name: 'View Recommendations', icon: 'clipboard', screen: 'Recommendation', color: '#9C27B0' },
     { name: 'Live Chat', icon: 'chatbubbles', screen: 'Chat', color: COLORS.secondary },
@@ -110,7 +110,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.ratingText}>4.8</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.bookIcon} onPress={() => navigation.navigate('BookAppointment')}>
+      <TouchableOpacity style={styles.bookIcon} onPress={() => navigation.navigate('DoctorSelection')}>
         <Ionicons name="calendar" size={24} color={COLORS.primary} />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -151,7 +151,7 @@ export default function HomeScreen({ navigation }) {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Featured Doctors</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('BookAppointment')}>
+          <TouchableOpacity onPress={() => navigation.navigate('AllDoctors')}>
             <Text style={styles.viewAllText}>View All →</Text>
           </TouchableOpacity>
         </View>
