@@ -1,163 +1,128 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, TextInput, TouchableOpacity, FlatList, Text, KeyboardAvoidingView, StyleSheet, Platform, Alert } from 'react-native';
-import { db, auth } from '../firebaseConfig';
-import { ref, push, onValue, update } from 'firebase/database';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
+import { auth, db } from '../firebaseConfig';
+import { ref, onValue, push, set, update } from 'firebase/database';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function IndividualChatScreen({ route, navigation }) {
+export default function IndividualChatScreen({ route }) {
   const { chatId, recipientId, recipientName } = route.params;
   const [messages, setMessages] = useState([]);
-  const [text, setText] = useState('');
-  const flatListRef = useRef();
-
-  // Mark unread messages as read when opening the chat
-  const markMessagesAsRead = async (msgs) => {
-    const updates = {};
-    msgs.forEach(msg => {
-      if (!msg.read && msg.sender !== auth.currentUser.uid) {
-        updates[`chats/${chatId}/messages/${msg.id}/read`] = true;
-      }
-    });
-    if (Object.keys(updates).length > 0) {
-      await update(ref(db), updates);
-    }
-  };
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const currentUserId = auth.currentUser.uid;
 
   useEffect(() => {
-    navigation.setOptions({
-      title: recipientName,
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={clearChat}
-          style={{ marginRight: 15 }}
-        >
-          <Text style={{ color: COLORS.secondary, fontWeight: 'bold' }}>Clear Chat</Text>
-        </TouchableOpacity>
-      )
-    });
-
     const messagesRef = ref(db, `chats/${chatId}/messages`);
-    const unsubscribe = onValue(messagesRef, snapshot => {
-      const data = snapshot.val() || {};
-      const messagesArray = Object.keys(data).map(id => ({ id, ...data[id] }));
-      messagesArray.sort((a, b) => a.timestamp - b.timestamp);
-      setMessages(messagesArray);
-      markMessagesAsRead(messagesArray); // Mark unread messages as read
+    
+    const unsubscribe = onValue(messagesRef, async (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const messagesList = Object.keys(data)
+          .map(key => ({ id: key, ...data[key] }))
+          .sort((a, b) => a.timestamp - b.timestamp);
+        
+        setMessages(messagesList);
+        
+        const unreadMessages = messagesList.filter(msg => 
+          msg.senderId !== currentUserId && !msg.read
+        );
+        
+        if (unreadMessages.length > 0) {
+          const updates = {};
+          unreadMessages.forEach(msg => {
+            updates[`chats/${chatId}/messages/${msg.id}/read`] = true;
+          });
+          await update(ref(db), updates);
+        }
+      } else {
+        setMessages([]);
+      }
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [chatId]);
+  }, [chatId, currentUserId]);
 
   const sendMessage = async () => {
-    if (text.trim() === '') return;
-
-    const messageRef = ref(db, `chats/${chatId}/messages`);
-    const newMessage = {
-      sender: auth.currentUser.uid,
-      text: text.trim(),
-      timestamp: Date.now(),
-      read: false,
-    };
+    if (newMessage.trim() === '') return;
 
     try {
-      await push(messageRef, newMessage);
-      await update(ref(db, `chats/${chatId}`), { 
-        lastMessage: text.trim(),
-        lastMessageTime: Date.now(),
-        participants: {
-          [auth.currentUser.uid]: true,
-          [recipientId]: true,
-        }
-      });
-      setText('');
+      const messageData = {
+        senderId: currentUserId,
+        recipientId: recipientId,
+        text: newMessage.trim(),
+        timestamp: Date.now(),
+        read: false,
+      };
+
+      const messagesRef = ref(db, `chats/${chatId}/messages`);
+      await push(messagesRef, messageData);
       
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      setNewMessage('');
     } catch (error) {
-      console.log('Send message error:', error);
+      console.log('Error sending message:', error);
     }
   };
 
-  const clearChat = () => {
-    Alert.alert(
-      'Clear Chat',
-      'Are you sure you want to delete all messages?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Yes', onPress: async () => {
-            await update(ref(db, `chats/${chatId}`), { messages: {} });
-            setMessages([]);
-          }
-        }
-      ]
-    );
-  };
-
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const renderItem = ({ item, index }) => {
-    const isMyMessage = item.sender === auth.currentUser.uid;
-    const showTime = index === 0 || messages[index - 1].sender !== item.sender;
-
+  const renderMessage = ({ item }) => {
+    const isCurrentUser = item.senderId === currentUserId;
+    
     return (
-      <View style={[styles.messageContainer, isMyMessage ? styles.myMessageContainer : styles.theirMessageContainer]}>
-        <View style={[styles.messageBubble, isMyMessage ? styles.myMessage : styles.theirMessage]}>
-          <Text style={[styles.messageText, isMyMessage ? styles.myMessageText : styles.theirMessageText]}>
-            {item.text}
-          </Text>
-          <Text style={[styles.timeText, isMyMessage ? styles.myTimeText : styles.theirTimeText]}>
-            {formatTime(item.timestamp)}
-          </Text>
-        </View>
+      <View style={[
+        styles.messageContainer,
+        isCurrentUser ? styles.sentMessage : styles.receivedMessage
+      ]}>
+        <Text style={[
+          styles.messageText,
+          isCurrentUser ? styles.sentMessageText : styles.receivedMessageText
+        ]}>
+          {item.text}
+        </Text>
+        <Text style={[
+          styles.messageTime,
+          isCurrentUser ? styles.sentMessageTime : styles.receivedMessageTime
+        ]}>
+          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {isCurrentUser && (
+            <Text style={styles.readStatus}>
+              {item.read ? ' ✓✓' : ' ✓'}
+            </Text>
+          )}
+        </Text>
       </View>
     );
   };
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {messages.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubbles-outline" size={60} color={COLORS.lightGray} />
-          <Text style={styles.emptyText}>No messages yet</Text>
-          <Text style={styles.emptySubText}>Start the conversation!</Text>
-        </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.messagesList}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
-        />
-      )}
+      <View style={styles.header}>
+        <Ionicons name="person-circle" size={40} color={COLORS.primary} />
+        <Text style={styles.recipientName}>{recipientName}</Text>
+      </View>
+
+      <FlatList
+        data={messages}
+        keyExtractor={(item) => item.id}
+        renderItem={renderMessage}
+        style={styles.messagesList}
+        showsVerticalScrollIndicator={false}
+      />
 
       <View style={styles.inputContainer}>
         <TextInput
-          value={text}
-          onChangeText={setText}
+          style={styles.textInput}
+          value={newMessage}
+          onChangeText={setNewMessage}
           placeholder="Type a message..."
           placeholderTextColor={COLORS.lightGray}
-          style={styles.input}
           multiline
-          maxLength={500}
         />
-        <TouchableOpacity 
-          onPress={sendMessage} 
-          style={[styles.sendButton, !text.trim() && styles.sendButtonDisabled]}
-          disabled={!text.trim()}
-        >
-          <Ionicons name="send" size={20} color="white" />
+        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+          <Ionicons name="send" size={24} color="white" />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -165,25 +130,92 @@ export default function IndividualChatScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SIZES.padding },
-  emptyText: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, marginTop: 15 },
-  emptySubText: { fontSize: 14, color: COLORS.lightGray, marginTop: 5 },
-  messagesList: { padding: 15, paddingBottom: 10 },
-  messageContainer: { marginBottom: 12, maxWidth: '75%' },
-  myMessageContainer: { alignSelf: 'flex-end' },
-  theirMessageContainer: { alignSelf: 'flex-start' },
-  messageBubble: { padding: 12, borderRadius: 18, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
-  myMessage: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
-  theirMessage: { backgroundColor: COLORS.card, borderBottomLeftRadius: 4 },
-  messageText: { fontSize: 15, lineHeight: 20 },
-  myMessageText: { color: 'white' },
-  theirMessageText: { color: COLORS.text },
-  timeText: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end' },
-  myTimeText: { color: 'rgba(255, 255, 255, 0.7)' },
-  theirTimeText: { color: COLORS.lightGray },
-  inputContainer: { flexDirection: 'row', padding: 10, backgroundColor: COLORS.card, borderTopWidth: 1, borderTopColor: COLORS.background, alignItems: 'flex-end' },
-  input: { flex: 1, backgroundColor: COLORS.background, borderRadius: 25, paddingHorizontal: 18, paddingVertical: 10, fontSize: 15, color: COLORS.text, maxHeight: 100, marginRight: 10 },
-  sendButton: { backgroundColor: COLORS.primary, borderRadius: 25, width: 45, height: 45, justifyContent: 'center', alignItems: 'center' },
-  sendButtonDisabled: { backgroundColor: COLORS.lightGray },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.background,
+  },
+  recipientName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginLeft: 10,
+  },
+  messagesList: {
+    flex: 1,
+    paddingHorizontal: 15,
+    paddingTop: 10,
+  },
+  messageContainer: {
+    marginVertical: 4,
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 15,
+  },
+  sentMessage: {
+    alignSelf: 'flex-end',
+    backgroundColor: COLORS.primary,
+  },
+  receivedMessage: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.card,
+  },
+  messageText: {
+    fontSize: 16,
+  },
+  sentMessageText: {
+    color: 'white',
+  },
+  receivedMessageText: {
+    color: COLORS.text,
+  },
+  messageTime: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  sentMessageTime: {
+    color: 'rgba(255,255,255,0.7)',
+    alignSelf: 'flex-end',
+  },
+  receivedMessageTime: {
+    color: COLORS.lightGray,
+    alignSelf: 'flex-start',
+  },
+  readStatus: {
+    fontSize: 10,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    padding: 15,
+    backgroundColor: COLORS.card,
+    alignItems: 'flex-end',
+  },
+  textInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.lightGray,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: 10,
+    fontSize: 16,
+    color: COLORS.text,
+    backgroundColor: COLORS.background,
+    maxHeight: 100,
+  },
+  sendButton: {
+    backgroundColor: COLORS.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

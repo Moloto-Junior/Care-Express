@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Alert, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
 import { db, auth } from '../firebaseConfig';
-import { ref, onValue, push, get } from 'firebase/database';
+import { ref, onValue, push, get, set } from 'firebase/database';
 import { notifyUserByUID } from './NotificationsService';
 import { Ionicons } from '@expo/vector-icons';
+
 
 export default function SendRecommendationScreen({ navigation }) {
   const [patients, setPatients] = useState([]);
@@ -13,6 +14,7 @@ export default function SendRecommendationScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [doctorName, setDoctorName] = useState('');
+
 
   useEffect(() => {
     const doctorId = auth.currentUser.uid;
@@ -23,6 +25,7 @@ export default function SendRecommendationScreen({ navigation }) {
         setDoctorName(snapshot.val().name || 'Doctor');
       }
     });
+
 
     const usersRef = ref(db, 'users');
     const unsubscribe = onValue(usersRef, snapshot => {
@@ -38,8 +41,10 @@ export default function SendRecommendationScreen({ navigation }) {
       setLoading(false);
     });
 
+
     return () => unsubscribe();
   }, []);
+
 
   const handleSendRecommendation = async () => {
     if (!selectedPatient) {
@@ -47,17 +52,21 @@ export default function SendRecommendationScreen({ navigation }) {
       return;
     }
 
+
     if (!recommendation.trim()) {
       Alert.alert('Empty Recommendation', 'Please enter a recommendation message.');
       return;
     }
+
 
     if (recommendation.trim().length < 10) {
       Alert.alert('Too Short', 'Please enter a more detailed recommendation (at least 10 characters).');
       return;
     }
 
+
     setSending(true);
+
 
     try {
       const doctorId = auth.currentUser.uid;
@@ -72,7 +81,22 @@ export default function SendRecommendationScreen({ navigation }) {
         read: false,
       };
 
+
       await push(ref(db, `recommendations/${selectedPatient.id}`), recData);
+
+      const notificationId = push(ref(db, `notifications/${selectedPatient.id}`)).key;
+      const notification = {
+        id: notificationId,
+        userId: selectedPatient.id,
+        title: 'New Recommendation from Doctor',
+        message: `Dr. ${doctorName} sent you a new health recommendation. Please check your recommendations.`,
+        type: 'recommendation',
+        doctorName: doctorName,
+        read: false,
+        timestamp: Date.now(),
+      };
+
+      await set(ref(db, `notifications/${selectedPatient.id}/${notificationId}`), notification);
 
       await notifyUserByUID(
         selectedPatient.id,
@@ -80,7 +104,9 @@ export default function SendRecommendationScreen({ navigation }) {
         `Dr. ${doctorName} sent you a new health recommendation`
       );
 
+
       setSending(false);
+
 
       Alert.alert(
         '✅ Recommendation Sent!',
@@ -106,6 +132,7 @@ export default function SendRecommendationScreen({ navigation }) {
     }
   };
 
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -113,6 +140,7 @@ export default function SendRecommendationScreen({ navigation }) {
       </View>
     );
   }
+
 
   if (patients.length === 0) {
     return (
@@ -124,6 +152,7 @@ export default function SendRecommendationScreen({ navigation }) {
     );
   }
 
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
@@ -131,6 +160,7 @@ export default function SendRecommendationScreen({ navigation }) {
         <Text style={styles.headerTitle}>Send Health Recommendation</Text>
         <Text style={styles.headerSubtitle}>Select a patient and provide health advice</Text>
       </View>
+
 
       {selectedPatient && (
         <View style={styles.selectedPatientCard}>
@@ -151,6 +181,7 @@ export default function SendRecommendationScreen({ navigation }) {
           </View>
         </View>
       )}
+
 
       {!selectedPatient && (
         <>
@@ -178,6 +209,7 @@ export default function SendRecommendationScreen({ navigation }) {
         </>
       )}
 
+
       {selectedPatient && (
         <>
           <Text style={styles.sectionTitle}>Your Recommendation:</Text>
@@ -194,6 +226,7 @@ export default function SendRecommendationScreen({ navigation }) {
             />
             <Text style={styles.charCount}>{recommendation.length} characters</Text>
           </View>
+
 
           <Text style={styles.sectionTitle}>Quick Templates:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.templatesContainer}>
@@ -223,6 +256,7 @@ export default function SendRecommendationScreen({ navigation }) {
             </TouchableOpacity>
           </ScrollView>
 
+
           <TouchableOpacity
             style={[styles.sendButton, sending && styles.sendButtonDisabled]}
             onPress={handleSendRecommendation}
@@ -240,10 +274,12 @@ export default function SendRecommendationScreen({ navigation }) {
         </>
       )}
 
+
       <View style={{ height: 30 }} />
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

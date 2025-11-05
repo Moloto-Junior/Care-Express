@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { auth, db } from '../firebaseConfig';
-import { ref, onValue, get } from 'firebase/database';
+import { ref, onValue, get, update } from 'firebase/database';
 import { COLORS, SIZES } from '../Theme';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,7 +9,7 @@ export default function ChatScreen({ navigation }) {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
-  const [unreadChats, setUnreadChats] = useState(0); 
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
   const createChatId = (userId1, userId2) => {
     return [userId1, userId2].sort().join('_');
@@ -59,7 +59,7 @@ export default function ChatScreen({ navigation }) {
                 
                 let lastMessage = 'No messages yet';
                 let timestamp = 0;
-                let unread = 0;
+                let unreadCount = 0;
 
                 try {
                   const snapshot = await get(messagesRef);
@@ -72,25 +72,25 @@ export default function ChatScreen({ navigation }) {
                     if (messages.length > 0) {
                       lastMessage = messages[0].text;
                       timestamp = messages[0].timestamp;
-                      unread = messages.filter(m => !m.read && m.senderId !== userId).length;
+                      unreadCount = messages.filter(m => !m.read && m.senderId !== userId).length;
                     }
                   }
                 } catch (error) {
                   console.log('Error fetching messages:', error);
                 }
 
-                return { ...chat, lastMessage, timestamp, unread };
+                return { ...chat, lastMessage, timestamp, unreadCount };
               })
             );
 
             chatsWithMessages.sort((a, b) => b.timestamp - a.timestamp);
             setChats(chatsWithMessages);
 
-            const totalUnread = chatsWithMessages.reduce((sum, c) => sum + (c.unread > 0 ? 1 : 0), 0);
-            setUnreadChats(totalUnread);
+            const totalUnread = chatsWithMessages.reduce((sum, chat) => sum + chat.unreadCount, 0);
+            setTotalUnreadCount(totalUnread);
           } else {
             setChats([]);
-            setUnreadChats(0);
+            setTotalUnreadCount(0);
           }
           setLoading(false);
         });
@@ -122,12 +122,29 @@ export default function ChatScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.chatIconContainer}>
+            <Ionicons name="chatbubbles" size={24} color={COLORS.primary} />
+            {totalUnreadCount > 0 && (
+              <View style={styles.totalBadge}>
+                <Text style={styles.totalBadgeText}>{totalUnreadCount}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.headerTitle}>Messages</Text>
+        </View>
+        {totalUnreadCount > 0 && (
+          <Text style={styles.unreadSummary}>{totalUnreadCount} unread</Text>
+        )}
+      </View>
+
       <FlatList
         data={chats}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            style={styles.chatItem}
+            style={[styles.chatItem, item.unreadCount > 0 && styles.unreadChatItem]}
             onPress={() => {
               const chatId = createChatId(auth.currentUser.uid, item.id);
               navigation.navigate('IndividualChat', { 
@@ -149,19 +166,26 @@ export default function ChatScreen({ navigation }) {
                   />
                 </View>
               )}
-              <View style={[styles.statusDot, { backgroundColor: item.unread > 0 ? 'red' : COLORS.success }]} />
+              <View style={[styles.statusDot, { backgroundColor: item.unreadCount > 0 ? 'red' : COLORS.success }]} />
             </View>
             
             <View style={styles.chatInfo}>
               <View style={styles.chatHeader}>
-                <Text style={styles.chatName}>
+                <Text style={[styles.chatName, item.unreadCount > 0 && styles.unreadChatName]}>
                   {item.role === 'Doctor' ? 'Dr. ' : ''}{item.name}
                 </Text>
-                <Text style={styles.chatTime}>
-                  {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                </Text>
+                <View style={styles.timeAndBadge}>
+                  <Text style={styles.chatTime}>
+                    {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </Text>
+                  {item.unreadCount > 0 && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadBadgeText}>{item.unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
               </View>
-              <Text style={styles.lastMessage} numberOfLines={1}>
+              <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadLastMessage]} numberOfLines={1}>
                 {item.lastMessage}
               </Text>
             </View>
@@ -204,6 +228,50 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.background,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chatIconContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  totalBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'red',
+    borderRadius: 12,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  totalBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  unreadSummary: {
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   chatItem: {
     flexDirection: 'row',
     padding: 15,
@@ -211,6 +279,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.background,
     alignItems: 'center',
+  },
+  unreadChatItem: {
+    backgroundColor: COLORS.primary + '05',
   },
   avatarContainer: {
     position: 'relative',
@@ -249,19 +320,47 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
   chatName: { 
     fontSize: 16, 
-    fontWeight: 'bold', 
+    fontWeight: '600', 
     color: COLORS.text,
+  },
+  unreadChatName: {
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  timeAndBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   chatTime: {
     fontSize: 12,
     color: COLORS.lightGray,
   },
+  unreadBadge: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    paddingHorizontal: 6,
+  },
+  unreadBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
   lastMessage: { 
     fontSize: 14, 
     color: COLORS.lightGray,
+  },
+  unreadLastMessage: {
+    color: COLORS.text,
+    fontWeight: '500',
   },
 });

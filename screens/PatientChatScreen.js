@@ -94,7 +94,7 @@ export default function PatientChatScreen({ route, navigation }) {
       />
       <View style={{ flexDirection:'row', padding:SIZES.padding }}>
         <TextInput
-          value={text}
+          value={text} 
           onChangeText={setText}
           placeholder="Type a message"
           style={{ flex:1, borderWidth:1, borderColor:COLORS.lightGray, borderRadius:12, padding:10, marginRight:10 }}

@@ -111,6 +111,24 @@ export default function DoctorDashboard({ navigation }) {
       <Text style={styles.greeting}>Welcome, Dr. {auth.currentUser.email.split('@')[0]}</Text>
       <Text style={styles.subtitle}>Your dashboard overview</Text>
 
+      <View style={styles.actionsRow}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('SetConsultationFee')}
+        >
+          <Ionicons name="cash" size={18} color="#fff" />
+          <Text style={styles.actionButtonText}>Set Consultation Fees</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.actionButton, { backgroundColor: '#6B73FF' }]}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <Ionicons name="person-circle" size={18} color="#fff" />
+          <Text style={styles.actionButtonText}>Edit Profile</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Upcoming Appointments ({appointments.length})</Text>
@@ -188,7 +206,33 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
   container: { flex: 1, padding: SIZES.padding, backgroundColor: COLORS.background },
   greeting: { fontSize: 28, fontWeight: '700', color: COLORS.primary, marginBottom: 5 },
-  subtitle: { fontSize: 14, color: COLORS.lightGray, marginBottom: 25 },
+  subtitle: { fontSize: 14, color: COLORS.lightGray, marginBottom: 15 },
+  actionsRow: { 
+    flexDirection: 'row', 
+    gap: 10, 
+    marginBottom: 25 
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: SIZES.radius,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+    marginLeft: 6,
+  },
   section: { marginBottom: 30 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   sectionTitle: { fontSize: 20, fontWeight: '600', color: COLORS.text },

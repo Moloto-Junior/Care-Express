@@ -22,8 +22,10 @@ import ProfileScreen from './screens/ProfileScreen';
 import PatientProfile from './screens/PatientProfile';
 import SearchMedicineScreen from './screens/SearchMedicineScreen';
 import ViewProfileScreen from './screens/ViewProfileScreen'; 
+import DoctorSelectionScreen from './screens/DoctorSelectionScreen';
 import { auth } from './firebaseConfig';
-
+import SetConsultationFeeScreen from './screens/SetConsultationFeeScreen';
+import AllDoctorsScreen from './screens/AllDoctorsScreen';
 const Stack = createNativeStackNavigator();
 
 const handleLogout = (navigation) => {
@@ -85,7 +87,21 @@ export default function AppNavigator() {
   component={PatientProfile} 
   options={{ title: 'Patient Profile' }} 
 />
-
+<Stack.Screen 
+  name="SetConsultationFee" 
+  component={SetConsultationFeeScreen} 
+  options={{ 
+    headerShown: true, 
+    title: 'Set Consultation Fees',
+    headerStyle: { backgroundColor: COLORS.primary },
+    headerTintColor: '#fff',
+  }} 
+/>
+<Stack.Screen 
+  name="AllDoctors" 
+  component={AllDoctorsScreen} 
+  options={{ headerShown: false }}
+/>
         <Stack.Screen 
           name="PatientTabs" 
           component={PatientTabs}
@@ -110,6 +126,15 @@ export default function AppNavigator() {
             headerTintColor: '#fff',
           }}
         />
+        <Stack.Screen 
+  name="DoctorSelection" 
+  component={DoctorSelectionScreen} 
+  options={{ 
+    title: "Select Doctor",
+    headerShown: false  
+  }}
+/>
+
 
         <Stack.Screen
           name="SearchMedicine"
