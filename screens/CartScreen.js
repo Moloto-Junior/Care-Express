@@ -111,16 +111,16 @@ export default function CartScreen({ route, navigation }) {
 
           <View style={styles.summaryContainer}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal:</Text>
+              <Text style={styles.summaryLabel}>Medicine Subtotal:</Text>
               <Text style={styles.summaryValue}>R{getTotal()}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Delivery Fee:</Text>
-              <Text style={styles.summaryValue}>R50</Text>
+              <Text style={styles.summaryValue}>Calculated at checkout</Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={styles.totalValue}>R{getTotal() + 50}</Text>
+              <Text style={styles.totalLabel}>Medicine Total:</Text>
+              <Text style={styles.totalValue}>R{getTotal()}</Text>
             </View>
 
             <TouchableOpacity style={styles.checkoutButton} onPress={proceedToCheckout}>
@@ -133,13 +133,13 @@ export default function CartScreen({ route, navigation }) {
                 Alert.alert('Cart Empty', 'Please add some medicines to your cart first.');
                 return;
               }
-              navigation.navigate('Payment', {
+              navigation.navigate('MedicinePayment', {
                 cart: cart,
-                totalAmount: getTotal() + 50, 
+                totalAmount: getTotal(),
               });
             }}>
               <Ionicons name="card" size={20} color="#fff" style={{ marginRight: 10 }} />
-              <Text style={styles.checkoutText}>Pay Now</Text>
+              <Text style={styles.checkoutText}>Proceed to Payment</Text>
             </TouchableOpacity>
           </View>
         </>

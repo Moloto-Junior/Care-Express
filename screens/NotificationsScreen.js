@@ -49,9 +49,7 @@ export default function NotificationsScreen({ navigation }) {
     setShowFullNotification(true);
     markAsRead(notification);
 
-    // Handle specific notification actions
     if (notification.type === 'appointment_request') {
-      // Navigate to appointment confirmation screen for doctors
       navigation.navigate('AppointmentConfirmation', {
         appointmentId: notification.appointmentId,
         appointment: notification,
@@ -66,6 +64,8 @@ export default function NotificationsScreen({ navigation }) {
       case 'appointment_confirmed': return 'checkmark-circle';
       case 'appointment_declined': return 'close-circle';
       case 'appointment_request': return 'calendar';
+      case 'medicine_purchase': return 'medical';
+      case 'recommendation_received': return 'clipboard';
       default: return 'notifications';
     }
   };
@@ -76,6 +76,8 @@ export default function NotificationsScreen({ navigation }) {
       case 'appointment_confirmed': return COLORS.success;
       case 'appointment_declined': return COLORS.secondary;
       case 'appointment_request': return COLORS.primary;
+      case 'medicine_purchase': return COLORS.success;
+      case 'recommendation_received': return '#9C27B0';
       default: return COLORS.lightGray;
     }
   };
@@ -85,13 +87,15 @@ export default function NotificationsScreen({ navigation }) {
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
     
-    if (diffDays === 0) {
-      return date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      });
+    if (diffMinutes < 1) {
+      return 'Just now';
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes}m ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
     } else if (diffDays === 1) {
       return 'Yesterday';
     } else if (diffDays < 7) {
@@ -99,7 +103,8 @@ export default function NotificationsScreen({ navigation }) {
     } else {
       return date.toLocaleDateString('en-US', { 
         month: 'short', 
-        day: 'numeric' 
+        day: 'numeric',
+        year: diffDays > 365 ? 'numeric' : undefined
       });
     }
   };
@@ -142,7 +147,10 @@ export default function NotificationsScreen({ navigation }) {
           </Text>
         </View>
 
-        {!item.read && <View style={styles.unreadDot} />}
+        <View style={styles.notificationRight}>
+          {!item.read && <View style={styles.unreadDot} />}
+          <Ionicons name="chevron-forward" size={16} color={COLORS.lightGray} />
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -173,7 +181,7 @@ export default function NotificationsScreen({ navigation }) {
           <Ionicons name="notifications-off" size={80} color={COLORS.lightGray} />
           <Text style={styles.emptyTitle}>No notifications yet</Text>
           <Text style={styles.emptyMessage}>
-            You'll receive notifications about appointments and other updates here.
+            You'll receive notifications about appointments, medicine orders, and recommendations here.
           </Text>
         </View>
       ) : (
@@ -224,50 +232,105 @@ export default function NotificationsScreen({ navigation }) {
                   {selectedNotification.message}
                 </Text>
 
-                {/* Show additional details for appointment notifications */}
-                {(selectedNotification.appointmentDate || selectedNotification.consultationType) && (
+                {selectedNotification.type === 'appointment_pending' && (
                   <View style={styles.appointmentDetails}>
                     <Text style={styles.detailsTitle}>Appointment Details:</Text>
-                    
-                    {selectedNotification.doctorName && (
-                      <View style={styles.detailRow}>
-                        <Ionicons name="person" size={16} color={COLORS.text} />
-                        <Text style={styles.detailText}>Doctor: {selectedNotification.doctorName}</Text>
-                      </View>
-                    )}
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Doctor: {selectedNotification.doctorName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="calendar" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Date: {selectedNotification.appointmentDate}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="time" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Time: {selectedNotification.appointmentTime}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="cash" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Total: R{selectedNotification.totalAmount}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name={selectedNotification.consultationType === 'home' ? 'home' : 'business'} size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>
+                        Type: {selectedNotification.consultationType === 'home' ? 'Home Visit' : 'Clinic Visit'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
 
-                    {selectedNotification.consultationType && (
-                      <View style={styles.detailRow}>
-                        <Ionicons name={selectedNotification.consultationType === 'home' ? 'home' : 'business'} size={16} color={COLORS.text} />
-                        <Text style={styles.detailText}>
-                          Type: {selectedNotification.consultationType === 'home' ? 'Home Visit' : 'Clinic Visit'}
-                        </Text>
-                      </View>
-                    )}
+                {selectedNotification.type === 'appointment_confirmed' && (
+                  <View style={styles.appointmentDetails}>
+                    <Text style={styles.detailsTitle}>Confirmed Appointment:</Text>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Doctor: {selectedNotification.doctorName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="calendar" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Date: {selectedNotification.appointmentDate}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="time" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Time: {selectedNotification.appointmentTime}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="cash" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Paid: R{selectedNotification.totalAmount}</Text>
+                    </View>
+                  </View>
+                )}
 
-                    {selectedNotification.appointmentDate && (
-                      <View style={styles.detailRow}>
-                        <Ionicons name="calendar" size={16} color={COLORS.text} />
-                        <Text style={styles.detailText}>Date: {selectedNotification.appointmentDate}</Text>
-                      </View>
-                    )}
+                {selectedNotification.type === 'medicine_purchase' && (
+                  <View style={styles.appointmentDetails}>
+                    <Text style={styles.detailsTitle}>Medicine Order Details:</Text>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="storefront" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>From: {selectedNotification.branchName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="location" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>To: {selectedNotification.deliveryAddress}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="medical" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Medicine Total: R{selectedNotification.medicineTotal}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="car" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Delivery Fee: R{selectedNotification.deliveryFee} ({selectedNotification.distance}km)</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="cash" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>Total Paid: R{selectedNotification.finalTotal}</Text>
+                    </View>
+                  </View>
+                )}
 
-                    {selectedNotification.appointmentTime && (
+                {selectedNotification.type === 'recommendation_received' && (
+                  <View style={styles.appointmentDetails}>
+                    <Text style={styles.detailsTitle}>Recommendation Details:</Text>
+                    <View style={styles.detailRow}>
+                      <Ionicons name="person" size={16} color={COLORS.text} />
+                      <Text style={styles.detailText}>From: {selectedNotification.doctorName}</Text>
+                    </View>
+                    {selectedNotification.recommendationType && (
                       <View style={styles.detailRow}>
-                        <Ionicons name="time" size={16} color={COLORS.text} />
-                        <Text style={styles.detailText}>Time: {selectedNotification.appointmentTime}</Text>
-                      </View>
-                    )}
-
-                    {selectedNotification.totalAmount && (
-                      <View style={styles.detailRow}>
-                        <Ionicons name="cash" size={16} color={COLORS.text} />
-                        <Text style={styles.detailText}>Total: R{selectedNotification.totalAmount}</Text>
+                        <Ionicons name="clipboard" size={16} color={COLORS.text} />
+                        <Text style={styles.detailText}>Type: {selectedNotification.recommendationType}</Text>
                       </View>
                     )}
                   </View>
                 )}
               </View>
+
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => setShowFullNotification(false)}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
             </ScrollView>
           )}
         </View>
@@ -293,7 +356,8 @@ const styles = StyleSheet.create({
   unreadTitle: { fontWeight: 'bold' },
   notificationMessage: { fontSize: 14, color: COLORS.lightGray, lineHeight: 20, marginBottom: 8 },
   notificationTime: { fontSize: 12, color: COLORS.lightGray },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary, marginLeft: 8 },
+  notificationRight: { alignItems: 'center', justifyContent: 'center' },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.primary, marginBottom: 5 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 50 },
   emptyTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginTop: 20 },
   emptyMessage: { fontSize: 14, color: COLORS.lightGray, textAlign: 'center', marginTop: 10, lineHeight: 20 },
@@ -301,15 +365,17 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.background },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
   modalContent: { flex: 1, padding: 20 },
-  fullNotificationCard: { backgroundColor: COLORS.card, borderRadius: SIZES.radius, padding: 20 },
+  fullNotificationCard: { backgroundColor: COLORS.card, borderRadius: SIZES.radius, padding: 20, marginBottom: 20 },
   fullNotificationHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
   fullNotificationIcon: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   fullNotificationTitleContainer: { flex: 1 },
   fullNotificationTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 5 },
   fullNotificationTime: { fontSize: 14, color: COLORS.lightGray },
   fullNotificationMessage: { fontSize: 16, color: COLORS.text, lineHeight: 24, marginBottom: 20 },
-  appointmentDetails: { backgroundColor: COLORS.background, padding: 15, borderRadius: SIZES.radius },
+  appointmentDetails: { backgroundColor: COLORS.background, padding: 15, borderRadius: SIZES.radius, marginTop: 10 },
   detailsTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text, marginBottom: 15 },
   detailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  detailText: { fontSize: 14, color: COLORS.text, marginLeft: 10 },
+  detailText: { fontSize: 14, color: COLORS.text, marginLeft: 10, flex: 1 },
+  closeButton: { backgroundColor: COLORS.primary, padding: 15, borderRadius: SIZES.radius, alignItems: 'center', marginTop: 10 },
+  closeButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });

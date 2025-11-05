@@ -24,7 +24,7 @@ import SearchMedicineScreen from './screens/SearchMedicineScreen';
 import ViewProfileScreen from './screens/ViewProfileScreen'; 
 import DoctorListScreen from './screens/DoctorListScreen';
 import DoctorSelectionScreen from './screens/DoctorSelectionScreen';
-import MedicineCheckoutScreen from './screens/MedicineCheckoutScreen';
+import MedicineCheckoutScreen from './screens/MedicinePaymentScreen';
 import ConsultationPaymentScreen from './screens/ConsultationPaymentScreen';
 import SetConsultationFeeScreen from './screens/SetConsultationFeeScreen';
 import { auth } from './firebaseConfig';
