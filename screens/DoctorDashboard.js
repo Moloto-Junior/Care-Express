@@ -67,7 +67,6 @@ export default function DoctorDashboard({ navigation }) {
             await remove(ref(db, `appointments/${appointmentId}`));
             Alert.alert('Success', 'Appointment deleted successfully');
           } catch (error) {
-            console.log(error);
             Alert.alert('Error', 'Failed to delete appointment');
           }
         }}
@@ -75,39 +74,8 @@ export default function DoctorDashboard({ navigation }) {
     );
   };
 
-  const renderAppointmentItem = (item) => (
-    <View key={item.id} style={styles.appointmentCard}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {item.patientProfilePicture ? (
-          <Image source={{ uri: item.patientProfilePicture }} style={{ width: 45, height: 45, borderRadius: 22.5, marginRight: 10 }} />
-        ) : (
-          <View style={[styles.avatarPlaceholder, { marginRight: 10 }]}>
-            <Ionicons name="person" size={24} color={COLORS.primary} />
-          </View>
-        )}
-        <View>
-          <Text style={styles.apptPatientName}>{item.patientName}</Text>
-          <Text style={styles.apptReason}>Reason: {item.reason}</Text>
-          <Text style={styles.apptTime}>{item.date} at {item.time}</Text>
-        </View>
-      </View>
-      <View style={{ flexDirection: 'row', marginTop: 8, justifyContent: 'space-between', alignItems: 'center' }}>
-        <View style={[styles.statusBadge,
-          item.status === 'Pending' ? styles.pending :
-          item.status === 'Confirmed' ? styles.confirmed :
-          styles.cancelled
-        ]}>
-          <Text style={styles.statusText}>{item.status || 'Pending'}</Text>
-        </View>
-        <TouchableOpacity onPress={() => deleteAppointment(item.id)}>
-          <Ionicons name="trash" size={22} color={COLORS.secondary} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Text style={styles.greeting}>Welcome, Dr. {auth.currentUser.email.split('@')[0]}</Text>
       <Text style={styles.subtitle}>Your dashboard overview</Text>
 
@@ -139,7 +107,36 @@ export default function DoctorDashboard({ navigation }) {
           )}
         </View>
         {appointments.length > 0 ? (
-          appointments.slice(0, 3).map(renderAppointmentItem)
+          appointments.slice(0, 3).map((item) => (
+            <View key={item.id} style={styles.appointmentCard}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {item.patientProfilePicture ? (
+                  <Image source={{ uri: item.patientProfilePicture }} style={{ width: 45, height: 45, borderRadius: 22.5, marginRight: 10 }} />
+                ) : (
+                  <View style={[styles.avatarPlaceholder, { marginRight: 10 }]}>
+                    <Ionicons name="person" size={24} color={COLORS.primary} />
+                  </View>
+                )}
+                <View>
+                  <Text style={styles.apptPatientName}>{item.patientName}</Text>
+                  <Text style={styles.apptReason}>Reason: {item.reason}</Text>
+                  <Text style={styles.apptTime}>{item.date} at {item.time}</Text>
+                </View>
+              </View>
+              <View style={{ flexDirection: 'row', marginTop: 8, justifyContent: 'space-between', alignItems: 'center' }}>
+                <View style={[styles.statusBadge,
+                  item.status === 'Pending' ? styles.pending :
+                  item.status === 'Confirmed' ? styles.confirmed :
+                  styles.cancelled
+                ]}>
+                  <Text style={styles.statusText}>{item.status || 'Pending'}</Text>
+                </View>
+                <TouchableOpacity onPress={() => deleteAppointment(item.id)}>
+                  <Ionicons name="trash" size={22} color={COLORS.secondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
         ) : (
           <View style={styles.emptyCard}>
             <Ionicons name="calendar-outline" size={40} color={COLORS.lightGray} />
