@@ -152,7 +152,7 @@ export default function DoctorDashboard({ navigation }) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Registered Patients ({patients.length})</Text>
           {patients.length > 5 && (
-            <TouchableOpacity onPress={() => navigation.navigate('Chat')}>
+            <TouchableOpacity onPress={() => navigation.navigate('AllPatients')}>
               <Text style={styles.viewAllText}>View All →</Text>
             </TouchableOpacity>
           )}
@@ -207,11 +207,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: SIZES.padding, backgroundColor: COLORS.background },
   greeting: { fontSize: 28, fontWeight: '700', color: COLORS.primary, marginBottom: 5 },
   subtitle: { fontSize: 14, color: COLORS.lightGray, marginBottom: 15 },
-  actionsRow: { 
-    flexDirection: 'row', 
-    gap: 10, 
-    marginBottom: 25 
-  },
+  actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 25 },
   actionButton: {
     flex: 1,
     flexDirection: 'row',

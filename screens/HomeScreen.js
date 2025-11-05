@@ -126,7 +126,6 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-      {/* Header Greeting */}
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>

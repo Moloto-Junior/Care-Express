@@ -27,6 +27,7 @@ import DoctorSelectionScreen from './screens/DoctorSelectionScreen';
 import MedicinePaymentScreen from './screens/MedicinePaymentScreen';
 import ConsultationPaymentScreen from './screens/ConsultationPaymentScreen';
 import SetConsultationFeeScreen from './screens/SetConsultationFeeScreen';
+import AllPatientsScreen from './screens/AllPatientsScreen';
 import { auth } from './firebaseConfig';
 
 const Stack = createNativeStackNavigator();
@@ -152,6 +153,11 @@ export default function AppNavigator() {
             headerTintColor: '#fff',
           }}
         />
+        <Stack.Screen 
+  name="AllPatients"
+  component={AllPatientsScreen}
+  options={{ title: 'All Patients', headerShown: true }}
+/>
 
         <Stack.Screen
           name="SearchMedicine"
