@@ -24,8 +24,24 @@ const calculateDeliveryFee = (distance) => {
   return segments * 30;
 };
 
+const formatCardNumber = (value) => {
+  return value
+    .replace(/\D/g, '')
+    .replace(/(\d{4})(?=\d)/g, '$1 ')
+    .trim();
+};
+
+const formatExpiry = (value) => {
+  const cleaned = value.replace(/\D/g, '');
+  if (cleaned.length >= 2) {
+    return cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4);
+  }
+  return cleaned;
+};
+
 export default function MedicinePaymentScreen({ route, navigation }) {
-  const { cart, totalAmount } = route.params || {};
+  const { cart = [], totalAmount = 0 } = route.params || {};
+  
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [deliveryLocation, setDeliveryLocation] = useState(null);
   const [showMapModal, setShowMapModal] = useState(false);
@@ -33,10 +49,9 @@ export default function MedicinePaymentScreen({ route, navigation }) {
   const [locationAddress, setLocationAddress] = useState('');
   const [distanceKm, setDistanceKm] = useState(0);
   const [deliveryFee, setDeliveryFee] = useState(0);
-  const [finalTotal, setFinalTotal] = useState(0);
+  const [finalTotal, setFinalTotal] = useState(totalAmount);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [processing, setProcessing] = useState(false);
-
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
@@ -68,13 +83,15 @@ export default function MedicinePaymentScreen({ route, navigation }) {
       calculateDeliveryFees();
     } else {
       setDeliveryFee(0);
-      setFinalTotal(totalAmount || 0);
+      setFinalTotal(totalAmount);
     }
   }, [selectedBranch, deliveryLocation, totalAmount]);
 
   const loadSavedLocation = async () => {
     try {
       const user = auth.currentUser;
+      if (!user) return;
+      
       const locSnap = await get(ref(db, `users/${user.uid}/deliveryLocation`));
       if (locSnap.exists()) {
         const loc = locSnap.val();
@@ -90,6 +107,8 @@ export default function MedicinePaymentScreen({ route, navigation }) {
     if (!selectedBranch || !deliveryLocation) return;
 
     const branch = BRANCHES[selectedBranch];
+    if (!branch) return;
+
     const distance = calculateDistance(
       deliveryLocation.latitude,
       deliveryLocation.longitude,
@@ -101,7 +120,7 @@ export default function MedicinePaymentScreen({ route, navigation }) {
     
     setDistanceKm(roundedDistance);
     setDeliveryFee(delivery);
-    setFinalTotal((totalAmount || 0) + delivery);
+    setFinalTotal(totalAmount + delivery);
   };
 
   const selectBranch = (branchId) => {
@@ -167,21 +186,6 @@ export default function MedicinePaymentScreen({ route, navigation }) {
     setShowPaymentForm(true);
   };
 
-  const formatCardNumber = (value) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{4})(?=\d)/g, '$1 ')
-      .trim();
-  };
-
-  const formatExpiry = (value) => {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length >= 2) {
-      return cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4);
-    }
-    return cleaned;
-  };
-
   const processPayment = async () => {
     if (!cardName || !cardNumber || !cardExpiry || !cardCvv) {
       Alert.alert('Missing Details', 'Please enter all card details');
@@ -198,6 +202,8 @@ export default function MedicinePaymentScreen({ route, navigation }) {
 
     try {
       const user = auth.currentUser;
+      if (!user) throw new Error('User not authenticated');
+
       const orderId = push(ref(db, 'orders')).key;
       
       const orderData = {
@@ -222,9 +228,7 @@ export default function MedicinePaymentScreen({ route, navigation }) {
       };
 
       await set(ref(db, `orders/${orderId}`), orderData);
-
       await remove(ref(db, `carts/${user.uid}`));
-
       await set(ref(db, `users/${user.uid}/deliveryLocation`), {
         ...deliveryLocation,
         address: locationAddress,
@@ -271,121 +275,123 @@ export default function MedicinePaymentScreen({ route, navigation }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Medicine Payment</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Select Branch</Text>
-        <Text style={styles.sectionSubtitle}>Choose which clinic to order from</Text>
-
-        {Object.values(BRANCHES).map((branch) => (
-          <TouchableOpacity
-            key={branch.id}
-            style={[
-              styles.branchOption,
-              selectedBranch === branch.id && styles.selectedBranch
-            ]}
-            onPress={() => selectBranch(branch.id)}
-          >
-            <View style={styles.branchContent}>
-              <Ionicons 
-                name="storefront" 
-                size={28} 
-                color={selectedBranch === branch.id ? 'white' : COLORS.primary} 
-              />
-              <View style={styles.branchInfo}>
-                <Text style={[
-                  styles.branchName,
-                  selectedBranch === branch.id && styles.selectedText
-                ]}>
-                  {branch.name}
-                </Text>
-                <Text style={[
-                  styles.branchAddress,
-                  selectedBranch === branch.id && styles.selectedText
-                ]}>
-                  📍 {branch.address}
-                </Text>
-              </View>
-              {selectedBranch === branch.id && (
-                <Ionicons name="checkmark-circle" size={24} color="white" />
-              )}
-            </View>
+    <View style={styles.container}>
+      <ScrollView>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
           </TouchableOpacity>
-        ))}
-      </View>
+          <Text style={styles.title}>Medicine Payment</Text>
+        </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Delivery Location</Text>
-        <TouchableOpacity style={styles.locationCard} onPress={openLocationPicker}>
-          <Ionicons name="location" size={24} color={COLORS.primary} />
-          <View style={styles.locationInfo}>
-            <Text style={styles.locationText}>
-              {locationAddress || 'Tap to select delivery location'}
-            </Text>
-            <Text style={styles.locationSubText}>
-              {deliveryLocation && selectedBranch
-                ? `${distanceKm}km from ${BRANCHES[selectedBranch]?.name} | Delivery: R${deliveryFee}`
-                : 'Select branch and location to calculate delivery fee'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={COLORS.lightGray} />
-        </TouchableOpacity>
-      </View>
-
-      {cart && cart.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Summary</Text>
-          {cart.map((item, index) => (
-            <View key={index} style={styles.orderItem}>
-              <Text style={styles.orderItemName}>{item.name} x{item.quantity}</Text>
-              <Text style={styles.orderItemPrice}>R{item.price * item.quantity}</Text>
-            </View>
+          <Text style={styles.sectionTitle}>Select Branch</Text>
+          <Text style={styles.sectionSubtitle}>Choose which clinic to order from</Text>
+
+          {Object.values(BRANCHES).map((branch) => (
+            <TouchableOpacity
+              key={`branch-${branch.id}`}
+              style={[
+                styles.branchOption,
+                selectedBranch === branch.id && styles.selectedBranch
+              ]}
+              onPress={() => selectBranch(branch.id)}
+            >
+              <View style={styles.branchContent}>
+                <Ionicons 
+                  name="storefront" 
+                  size={28} 
+                  color={selectedBranch === branch.id ? 'white' : COLORS.primary} 
+                />
+                <View style={styles.branchInfo}>
+                  <Text style={[
+                    styles.branchName,
+                    selectedBranch === branch.id && styles.selectedText
+                  ]}>
+                    {branch.name}
+                  </Text>
+                  <Text style={[
+                    styles.branchAddress,
+                    selectedBranch === branch.id && styles.selectedText
+                  ]}>
+                    📍 {branch.address}
+                  </Text>
+                </View>
+                {selectedBranch === branch.id && (
+                  <Ionicons name="checkmark-circle" size={24} color="white" />
+                )}
+              </View>
+            </TouchableOpacity>
           ))}
         </View>
-      )}
 
-      {selectedBranch && deliveryLocation && (
-        <View style={styles.totalSection}>
-          <View style={styles.totalCard}>
-            <Text style={styles.totalTitle}>Payment Summary</Text>
-            
-            <View style={styles.costRow}>
-              <Text style={styles.costLabel}>Medicine Total</Text>
-              <Text style={styles.costValue}>R{totalAmount || 0}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Delivery Location</Text>
+          <TouchableOpacity style={styles.locationCard} onPress={openLocationPicker}>
+            <Ionicons name="location" size={24} color={COLORS.primary} />
+            <View style={styles.locationInfo}>
+              <Text style={styles.locationText}>
+                {locationAddress || 'Tap to select delivery location'}
+              </Text>
+              <Text style={styles.locationSubText}>
+                {deliveryLocation && selectedBranch
+                  ? `${distanceKm}km from ${BRANCHES[selectedBranch]?.name} | Delivery: R${deliveryFee}`
+                  : 'Select branch and location to calculate delivery fee'}
+              </Text>
             </View>
-            
-            <View style={styles.costRow}>
-              <Text style={styles.costLabel}>Delivery Fee ({distanceKm}km)</Text>
-              <Text style={styles.costValue}>R{deliveryFee}</Text>
-            </View>
-            
-            <View style={styles.costRow}>
-              <Text style={styles.costLabel}>From: {BRANCHES[selectedBranch]?.name}</Text>
-              <Text style={styles.costValue}>Selected</Text>
-            </View>
-            
-            <View style={styles.totalDivider} />
-            <View style={styles.costRow}>
-              <Text style={styles.finalTotalLabel}>Final Total</Text>
-              <Text style={styles.finalTotalValue}>R{finalTotal}</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity 
-            style={styles.payButton}
-            onPress={proceedToPayment}
-          >
-            <Ionicons name="card" size={22} color="white" />
-            <Text style={styles.payButtonText}>Proceed to Payment - R{finalTotal}</Text>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.lightGray} />
           </TouchableOpacity>
         </View>
-      )}
+
+        {cart && cart.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Order Summary</Text>
+            {cart.map((item, index) => (
+              <View key={`cart-item-${item.id || index}`} style={styles.orderItem}>
+                <Text style={styles.orderItemName}>{item.name} x{item.quantity || 1}</Text>
+                <Text style={styles.orderItemPrice}>R{(item.price || 0) * (item.quantity || 1)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {selectedBranch && deliveryLocation && (
+          <View style={styles.totalSection}>
+            <View style={styles.totalCard}>
+              <Text style={styles.totalTitle}>Payment Summary</Text>
+              
+              <View style={styles.costRow}>
+                <Text style={styles.costLabel}>Medicine Total</Text>
+                <Text style={styles.costValue}>R{totalAmount}</Text>
+              </View>
+              
+              <View style={styles.costRow}>
+                <Text style={styles.costLabel}>Delivery Fee ({distanceKm}km)</Text>
+                <Text style={styles.costValue}>R{deliveryFee}</Text>
+              </View>
+              
+              <View style={styles.costRow}>
+                <Text style={styles.costLabel}>From: {BRANCHES[selectedBranch]?.name}</Text>
+                <Text style={styles.costValue}>✓ Selected</Text>
+              </View>
+              
+              <View style={styles.totalDivider} />
+              <View style={styles.costRow}>
+                <Text style={styles.finalTotalLabel}>Final Total</Text>
+                <Text style={styles.finalTotalValue}>R{finalTotal}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.payButton}
+              onPress={proceedToPayment}
+            >
+              <Ionicons name="card" size={22} color="white" />
+              <Text style={styles.payButtonText}>Proceed to Payment - R{finalTotal}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
 
       <Modal visible={showPaymentForm} animationType="slide">
         <View style={styles.formContainer}>
@@ -394,18 +400,20 @@ export default function MedicinePaymentScreen({ route, navigation }) {
               <Ionicons name="close" size={24} color={COLORS.text} />
             </TouchableOpacity>
             <Text style={styles.formTitle}>Card Payment</Text>
-            <View />
+            <View style={styles.headerSpacer} />
           </View>
 
           <ScrollView style={styles.formContent}>
-            <View style={styles.paymentSummary}>
-              <Text style={styles.summaryTitle}>Final Order Summary</Text>
-              <Text style={styles.summaryText}>🏥 From: {BRANCHES[selectedBranch]?.name}</Text>
-              <Text style={styles.summaryText}>📍 To: {locationAddress}</Text>
-              <Text style={styles.summaryText}>📦 Medicine: R{totalAmount}</Text>
-              <Text style={styles.summaryText}>🚚 Delivery: R{deliveryFee} ({distanceKm}km)</Text>
-              <Text style={styles.summaryText}>💰 Total: R{finalTotal}</Text>
-            </View>
+            {selectedBranch && (
+              <View style={styles.paymentSummary}>
+                <Text style={styles.summaryTitle}>Final Order Summary</Text>
+                <Text style={styles.summaryText}>🏥 From: {BRANCHES[selectedBranch]?.name}</Text>
+                <Text style={styles.summaryText}>📍 To: {locationAddress}</Text>
+                <Text style={styles.summaryText}>📦 Medicine: R{totalAmount}</Text>
+                <Text style={styles.summaryText}>🚚 Delivery: R{deliveryFee} ({distanceKm}km)</Text>
+                <Text style={styles.summaryText}>💰 Total: R{finalTotal}</Text>
+              </View>
+            )}
 
             <View style={styles.cardForm}>
               <Text style={styles.inputLabel}>Cardholder Name</Text>
@@ -522,7 +530,7 @@ export default function MedicinePaymentScreen({ route, navigation }) {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -540,7 +548,7 @@ const styles = StyleSheet.create({
   branchName: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
   branchAddress: { fontSize: 14, color: COLORS.lightGray, marginTop: 3 },
   selectedText: { color: 'white' },
-  locationCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, padding: 18, borderRadius: SIZES.radius, borderWidth: 2, borderColor: selectedBranch && deliveryLocation ? COLORS.success : COLORS.primary },
+  locationCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, padding: 18, borderRadius: SIZES.radius, borderWidth: 2, borderColor: COLORS.primary },
   locationInfo: { flex: 1, marginLeft: 12 },
   locationText: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
   locationSubText: { fontSize: 13, color: COLORS.lightGray, marginTop: 4 },
@@ -561,6 +569,7 @@ const styles = StyleSheet.create({
   formContainer: { flex: 1, backgroundColor: COLORS.background },
   formHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.background },
   formTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
+  headerSpacer: { width: 24 },
   formContent: { flex: 1, padding: 20 },
   paymentSummary: { backgroundColor: COLORS.success + '15', padding: 18, borderRadius: SIZES.radius, marginBottom: 20, borderLeftWidth: 4, borderLeftColor: COLORS.success },
   summaryTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text, marginBottom: 12 },

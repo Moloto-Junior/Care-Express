@@ -48,14 +48,6 @@ export default function NotificationsScreen({ navigation }) {
     setSelectedNotification(notification);
     setShowFullNotification(true);
     markAsRead(notification);
-
-    if (notification.type === 'appointment_request') {
-      navigation.navigate('AppointmentConfirmation', {
-        appointmentId: notification.appointmentId,
-        appointment: notification,
-        notificationId: notification.id
-      });
-    }
   };
 
   const getNotificationIcon = (type) => {

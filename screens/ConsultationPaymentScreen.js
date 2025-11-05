@@ -167,11 +167,6 @@ export default function ConsultationPaymentScreen({ route, navigation }) {
   const confirmLocation = () => {
     if (selectedLocation) {
       setShowMapModal(false);
-      Alert.alert(
-        'Location Confirmed', 
-        `Distance from ${CLINICS[doctorBranch]?.name}: ${distanceKm}km\nTravel fee: R${travelFee}\nTotal: R${totalAmount}`,
-        [{ text: 'OK' }]
-      );
     }
   };
 
@@ -204,7 +199,7 @@ export default function ConsultationPaymentScreen({ route, navigation }) {
           totalAmount
         },
         distance: selectedType === 'home' ? distanceKm : 0,
-        status: 'confirmed',
+        status: 'pending',
         timestamp: Date.now()
       };
 
@@ -218,9 +213,47 @@ export default function ConsultationPaymentScreen({ route, navigation }) {
         });
       }
 
+      const patientNotificationId = push(ref(db, `notifications/${user.uid}`)).key;
+      const patientNotification = {
+        id: patientNotificationId,
+        userId: user.uid,
+        title: 'Appointment Booked - Awaiting Confirmation',
+        message: `Your ${selectedType === 'home' ? 'home visit' : 'clinic'} appointment with Dr. ${doctor.name} has been submitted and is awaiting confirmation. Date: ${date} at ${time}. Total: R${totalAmount}`,
+        type: 'appointment_pending',
+        appointmentId,
+        doctorName: doctor.name,
+        consultationType: selectedType,
+        appointmentDate: date,
+        appointmentTime: time,
+        totalAmount,
+        read: false,
+        timestamp: Date.now(),
+      };
+      await set(ref(db, `notifications/${user.uid}/${patientNotificationId}`), patientNotification);
+
+      const doctorNotificationId = push(ref(db, `notifications/${doctorId}`)).key;
+      const doctorNotification = {
+        id: doctorNotificationId,
+        userId: doctorId,
+        title: 'New Appointment Request',
+        message: `${user.displayName || user.email} has requested a ${selectedType === 'home' ? 'home visit' : 'clinic'} appointment on ${date} at ${time}. Reason: ${reason}`,
+        type: 'appointment_request',
+        appointmentId,
+        patientId: user.uid,
+        patientName: user.displayName || user.email,
+        consultationType: selectedType,
+        appointmentDate: date,
+        appointmentTime: time,
+        reason,
+        totalAmount,
+        read: false,
+        timestamp: Date.now(),
+      };
+      await set(ref(db, `notifications/${doctorId}/${doctorNotificationId}`), doctorNotification);
+
       Alert.alert(
-        'Appointment Confirmed!',
-        `Your appointment has been booked successfully.\n\nDoctor: Dr. ${doctor.name}\nType: ${selectedType === 'home' ? 'Home Visit' : 'Clinic Visit'}\nDate: ${date}\nTime: ${time}\nTotal Paid: R${totalAmount}`,
+        'Appointment Submitted!',
+        `Your appointment request has been sent to Dr. ${doctor.name}. You will receive a notification once the doctor confirms or declines your appointment.\n\nType: ${selectedType === 'home' ? 'Home Visit' : 'Clinic Visit'}\nDate: ${date}\nTime: ${time}\nTotal: R${totalAmount}`,
         [
           {
             text: 'OK',
@@ -489,7 +522,7 @@ export default function ConsultationPaymentScreen({ route, navigation }) {
               <Ionicons name="checkmark-circle" size={24} color="white" />
             )}
             <Text style={styles.confirmButtonText}>
-              {processing ? 'Processing...' : `Confirm & Pay R${totalAmount}`}
+              {processing ? 'Processing...' : `Submit Request - R${totalAmount}`}
             </Text>
           </TouchableOpacity>
         </View>

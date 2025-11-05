@@ -4,7 +4,6 @@ import { COLORS, SIZES } from '../Theme';
 import { Ionicons } from '@expo/vector-icons';
 import { db, auth } from '../firebaseConfig';
 import { ref, push } from 'firebase/database';
-import { notifyUserByUID } from './NotificationsService';
 
 export default function CartScreen({ route, navigation }) {
   const [cart, setCart] = useState([]);

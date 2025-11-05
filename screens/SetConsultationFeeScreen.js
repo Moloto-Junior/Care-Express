@@ -1,518 +1,298 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Image, Modal, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator, Switch } from 'react-native';
 import { COLORS, SIZES } from '../Theme';
 import { Ionicons } from '@expo/vector-icons';
-import { db } from '../firebaseConfig';
-import { ref, onValue, get } from 'firebase/database';
+import { auth, db } from '../firebaseConfig';
+import { ref, set, get } from 'firebase/database';
 
-export default function DoctorSelectionScreen({ navigation }) {
-  const [doctors, setDoctors] = useState([]);
+export default function SetConsultationFeeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
-  const [showProfile, setShowProfile] = useState(false);
-  const [viewingDoctor, setViewingDoctor] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [clinicFee, setClinicFee] = useState('');
+  const [homeFee, setHomeFee] = useState('');
+  const [availableForHomeVisits, setAvailableForHomeVisits] = useState(true);
+  const [selectedBranch, setSelectedBranch] = useState('limpopo');
 
-  const CLINICS = {
-    limpopo: { name: 'Limpopo Polokwane Clinic' },
-    johannesburg: { name: 'Johannesburg Braamfontein Clinic' }
+  const BRANCHES = {
+    limpopo: { name: 'Limpopo Polokwane Clinic', location: 'Polokwane, Limpopo' },
+    johannesburg: { name: 'Johannesburg Braamfontein Clinic', location: 'Braamfontein, Johannesburg' }
   };
 
   useEffect(() => {
-    loadAllDoctors();
+    loadCurrentFees();
   }, []);
 
-  const loadAllDoctors = () => {
-    const usersRef = ref(db, 'users');
-    onValue(usersRef, async (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const doctorList = [];
-        
-        for (const [uid, userData] of Object.entries(data)) {
-          if (userData.role === 'Doctor') {
-            try {
-              const feesSnapshot = await get(ref(db, `doctors/${uid}/fees`));
-              const fees = feesSnapshot.exists() ? feesSnapshot.val() : null;
-              
-              doctorList.push({
-                id: uid,
-                ...userData,
-                fees: fees,
-                availableForHomeVisits: fees?.availableForHomeVisits || false
-              });
-            } catch (error) {
-              console.log('Error loading fees for doctor:', uid, error);
-              doctorList.push({
-                id: uid,
-                ...userData,
-                fees: null,
-                availableForHomeVisits: false
-              });
-            }
-          }
-        }
-        
-        setDoctors(doctorList);
-      } else {
-        setDoctors([]);
+  const loadCurrentFees = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const feesSnapshot = await get(ref(db, `doctors/${user.uid}/fees`));
+      if (feesSnapshot.exists()) {
+        const fees = feesSnapshot.val();
+        setClinicFee(fees.consultationFee?.toString() || '');
+        setHomeFee(fees.homeVisitFee?.toString() || '');
+        setAvailableForHomeVisits(fees.availableForHomeVisits !== undefined ? fees.availableForHomeVisits : true);
+        setSelectedBranch(fees.doctorBranch || 'limpopo');
       }
-      setLoading(false);
-    });
+    } catch (error) {
+      console.error('Error loading fees:', error);
+    }
+    setLoading(false);
   };
 
-  const viewDoctorProfile = (doctor) => {
-    setViewingDoctor(doctor);
-    setShowProfile(true);
-  };
-
-  const selectDoctor = (doctor) => {
-    if (!doctor.fees) {
-      Alert.alert('Fees Not Set', 'This doctor has not set their consultation fees yet.');
+  const saveFees = async () => {
+    if (!clinicFee || !homeFee) {
+      Alert.alert('Missing Information', 'Please enter both clinic and home visit fees.');
       return;
     }
 
-    navigation.navigate('ConsultationPayment', {
-      doctorId: doctor.id,
-      doctor: doctor,
-      fees: doctor.fees
-    });
+    const clinicAmount = parseInt(clinicFee);
+    const homeAmount = parseInt(homeFee);
+
+    if (clinicAmount < 50 || homeAmount < 50) {
+      Alert.alert('Invalid Amount', 'Fees must be at least R50.');
+      return;
+    }
+
+    if (clinicAmount > 2000 || homeAmount > 5000) {
+      Alert.alert('Amount Too High', 'Please enter reasonable consultation fees.');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const user = auth.currentUser;
+      const feesData = {
+        consultationFee: clinicAmount,
+        homeVisitFee: homeAmount,
+        availableForHomeVisits,
+        doctorBranch: selectedBranch,
+        lastUpdated: Date.now()
+      };
+
+      await set(ref(db, `doctors/${user.uid}/fees`), feesData);
+
+      Alert.alert(
+        'Fees Updated Successfully!',
+        `Your consultation fees have been set:\n\n🏥 Clinic Visit: R${clinicAmount}\n🏠 Home Visit: ${availableForHomeVisits ? `R${homeAmount} + travel` : 'Not Available'}\n📍 Primary Branch: ${BRANCHES[selectedBranch].name}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error('Error saving fees:', error);
+      Alert.alert('Error', 'Failed to save fees. Please try again.');
+    }
+
+    setSaving(false);
   };
-
-  const renderDoctor = ({ item }) => (
-    <View style={styles.doctorCard}>
-      <View style={styles.doctorHeader}>
-        <View style={styles.doctorAvatar}>
-          {item.profilePicture ? (
-            <Image source={{ uri: item.profilePicture }} style={styles.avatarImage} />
-          ) : (
-            <Ionicons name="person" size={35} color={COLORS.primary} />
-          )}
-        </View>
-        
-        <View style={styles.doctorInfo}>
-          <Text style={styles.doctorName}>Dr. {item.name}</Text>
-          <Text style={styles.doctorSpecialty}>{item.specialty || 'General Practice'}</Text>
-          <Text style={styles.doctorBranch}>
-            📍 {item.fees?.doctorBranch ? CLINICS[item.fees.doctorBranch]?.name : 'Branch not set'}
-          </Text>
-          <View style={styles.feesRow}>
-            <Text style={styles.feeText}>💼 Clinic: R{item.fees?.consultationFee || 0}</Text>
-            {item.availableForHomeVisits && (
-              <Text style={styles.feeText}>🏠 Home: R{item.fees?.homeVisitFee || 0}</Text>
-            )}
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.doctorActions}>
-        <TouchableOpacity 
-          style={styles.viewProfileButton}
-          onPress={() => viewDoctorProfile(item)}
-        >
-          <Ionicons name="person-circle" size={18} color={COLORS.primary} />
-          <Text style={styles.viewProfileText}>View Profile</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.selectDoctorButton}
-          onPress={() => selectDoctor(item)}
-        >
-          <Ionicons name="calendar" size={18} color="white" />
-          <Text style={styles.selectDoctorText}>Select Doctor</Text>
-        </TouchableOpacity>
-      </View>
-
-      {item.availableForHomeVisits && (
-        <View style={styles.availabilityBadge}>
-          <Ionicons name="checkmark-circle" size={12} color={COLORS.success} />
-          <Text style={styles.badgeText}>Home visits available</Text>
-        </View>
-      )}
-    </View>
-  );
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading available doctors...</Text>
+        <Text style={styles.loadingText}>Loading current fees...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topHeader}>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>Select Doctor</Text>
-        <Text style={styles.doctorCount}>{doctors.length} available</Text>
+        <Text style={styles.title}>Set Consultation Fees</Text>
       </View>
 
-      {doctors.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="medical-outline" size={80} color={COLORS.lightGray} />
-          <Text style={styles.emptyText}>No doctors available</Text>
-          <Text style={styles.emptySubText}>Please check back later</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={doctors}
-          keyExtractor={(item) => item.id}
-          renderItem={renderDoctor}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
+      <View style={styles.infoCard}>
+        <Ionicons name="information-circle" size={24} color={COLORS.primary} />
+        <Text style={styles.infoText}>
+          Set your consultation fees for both clinic visits and home visits. Patients will see these fees when booking appointments.
+        </Text>
+      </View>
 
-      <Modal visible={showProfile} animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowProfile(false)}>
-              <Ionicons name="close" size={24} color={COLORS.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Doctor Profile</Text>
-            <View />
-          </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Primary Branch</Text>
+        <Text style={styles.sectionSubtitle}>Select your main working location</Text>
 
-          {viewingDoctor && (
-            <ScrollView style={styles.profileContent}>
-              <View style={styles.profileHeader}>
-                <View style={styles.profileAvatar}>
-                  {viewingDoctor.profilePicture ? (
-                    <Image source={{ uri: viewingDoctor.profilePicture }} style={styles.profileImage} />
-                  ) : (
-                    <Ionicons name="person" size={60} color={COLORS.primary} />
-                  )}
-                </View>
-                <Text style={styles.profileName}>Dr. {viewingDoctor.name}</Text>
-                <Text style={styles.profileSpecialty}>{viewingDoctor.specialty || 'General Practice'}</Text>
-                <Text style={styles.profileBranch}>
-                  📍 {viewingDoctor.fees?.doctorBranch ? CLINICS[viewingDoctor.fees.doctorBranch]?.name : 'Branch not set'}
+        {Object.entries(BRANCHES).map(([key, branch]) => (
+          <TouchableOpacity
+            key={`branch-${key}`}
+            style={[
+              styles.branchOption,
+              selectedBranch === key && styles.selectedBranchOption
+            ]}
+            onPress={() => setSelectedBranch(key)}
+          >
+            <View style={styles.branchContent}>
+              <Ionicons 
+                name="business" 
+                size={24} 
+                color={selectedBranch === key ? 'white' : COLORS.primary} 
+              />
+              <View style={styles.branchInfo}>
+                <Text style={[
+                  styles.branchName,
+                  selectedBranch === key && styles.selectedBranchText
+                ]}>
+                  {branch.name}
+                </Text>
+                <Text style={[
+                  styles.branchLocation,
+                  selectedBranch === key && styles.selectedBranchText
+                ]}>
+                  📍 {branch.location}
                 </Text>
               </View>
-
-              <View style={styles.profileSection}>
-                <Text style={styles.profileSectionTitle}>📧 Contact Information</Text>
-                <Text style={styles.profileDetail}>Email: {viewingDoctor.email}</Text>
-                <Text style={styles.profileDetail}>Phone: {viewingDoctor.phone || 'Not provided'}</Text>
-              </View>
-
-              <View style={styles.profileSection}>
-                <Text style={styles.profileSectionTitle}>💰 Consultation Fees</Text>
-                <Text style={styles.profileDetail}>🏥 Clinic Visit: R{viewingDoctor.fees?.consultationFee || 0}</Text>
-                {viewingDoctor.availableForHomeVisits ? (
-                  <Text style={styles.profileDetail}>🏠 Home Visit: R{viewingDoctor.fees?.homeVisitFee || 0} + travel</Text>
-                ) : (
-                  <Text style={styles.profileDetailDisabled}>🏠 Home Visit: Not Available</Text>
-                )}
-              </View>
-
-              <View style={styles.profileSection}>
-                <Text style={styles.profileSectionTitle}>🩺 Services</Text>
-                <Text style={styles.profileDetail}>✅ Clinic Consultations</Text>
-                <Text style={styles.profileDetail}>
-                  {viewingDoctor.availableForHomeVisits ? '✅' : '❌'} Home Visits
-                </Text>
-                <Text style={styles.profileDetail}>✅ Medical Prescriptions</Text>
-                <Text style={styles.profileDetail}>✅ Health Recommendations</Text>
-              </View>
-
-              {viewingDoctor.about && (
-                <View style={styles.profileSection}>
-                  <Text style={styles.profileSectionTitle}>ℹ️ About Doctor</Text>
-                  <Text style={styles.profileAbout}>{viewingDoctor.about}</Text>
-                </View>
+              {selectedBranch === key && (
+                <Ionicons name="checkmark-circle" size={24} color="white" />
               )}
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-              <TouchableOpacity 
-                style={styles.selectFromProfileButton} 
-                onPress={() => {
-                  setShowProfile(false);
-                  selectDoctor(viewingDoctor);
-                }}
-              >
-                <Ionicons name="calendar" size={20} color="white" />
-                <Text style={styles.selectFromProfileText}>Select Dr. {viewingDoctor.name}</Text>
-              </TouchableOpacity>
-            </ScrollView>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Consultation Fees</Text>
+        
+        <View style={styles.feeCard}>
+          <View style={styles.feeHeader}>
+            <Ionicons name="business" size={24} color={COLORS.primary} />
+            <Text style={styles.feeTitle}>In-Clinic Consultation</Text>
+          </View>
+          <Text style={styles.feeDescription}>
+            Fee for patients visiting you at {BRANCHES[selectedBranch]?.name}
+          </Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Fee Amount (R)</Text>
+            <TextInput
+              style={styles.feeInput}
+              placeholder="300"
+              placeholderTextColor={COLORS.lightGray}
+              value={clinicFee}
+              onChangeText={setClinicFee}
+              keyboardType="numeric"
+              maxLength={4}
+            />
+          </View>
+        </View>
+
+        <View style={styles.feeCard}>
+          <View style={styles.feeHeader}>
+            <Ionicons name="home" size={24} color={COLORS.success} />
+            <Text style={styles.feeTitle}>Home Visit Consultation</Text>
+            <Switch
+              value={availableForHomeVisits}
+              onValueChange={setAvailableForHomeVisits}
+              trackColor={{ false: COLORS.lightGray, true: COLORS.success }}
+              thumbColor={availableForHomeVisits ? 'white' : '#f4f3f4'}
+            />
+          </View>
+          <Text style={styles.feeDescription}>
+            {availableForHomeVisits 
+              ? 'Fee for visiting patients at their location (+ travel charges)'
+              : 'Toggle to enable home visits for your patients'}
+          </Text>
+          {availableForHomeVisits && (
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Base Home Visit Fee (R)</Text>
+              <TextInput
+                style={styles.feeInput}
+                placeholder="500"
+                placeholderTextColor={COLORS.lightGray}
+                value={homeFee}
+                onChangeText={setHomeFee}
+                keyboardType="numeric"
+                maxLength={4}
+              />
+              <Text style={styles.feeNote}>
+                💡 Travel charges (R50 per 2km) will be added automatically based on distance
+              </Text>
+            </View>
           )}
         </View>
-      </Modal>
-    </View>
+      </View>
+
+      <View style={styles.previewSection}>
+        <Text style={styles.previewTitle}>Fee Preview</Text>
+        <View style={styles.previewCard}>
+          <Text style={styles.previewHeader}>Patients will see:</Text>
+          <View style={styles.previewRow}>
+            <Text style={styles.previewLabel}>🏥 Clinic Visit:</Text>
+            <Text style={styles.previewValue}>R{clinicFee || '0'}</Text>
+          </View>
+          <View style={styles.previewRow}>
+            <Text style={styles.previewLabel}>🏠 Home Visit:</Text>
+            <Text style={styles.previewValue}>
+              {availableForHomeVisits ? `R${homeFee || '0'} + travel` : 'Not Available'}
+            </Text>
+          </View>
+          <View style={styles.previewRow}>
+            <Text style={styles.previewLabel}>📍 Your Branch:</Text>
+            <Text style={styles.previewValue}>{BRANCHES[selectedBranch]?.name}</Text>
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={[styles.saveButton, saving && styles.savingButton]} 
+        onPress={saveFees}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator size={24} color="white" />
+        ) : (
+          <Ionicons name="save" size={24} color="white" />
+        )}
+        <Text style={styles.saveButtonText}>
+          {saving ? 'Saving Fees...' : 'Save Consultation Fees'}
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  topHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.background,
-  },
-  screenTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  doctorCount: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-  },
-  listContainer: {
-    padding: 15,
-  },
-  doctorCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: SIZES.radius,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-    position: 'relative',
-  },
-  doctorHeader: {
-    flexDirection: 'row',
-    marginBottom: 15,
-  },
-  doctorAvatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-    borderWidth: 3,
-    borderColor: COLORS.primary,
-  },
-  avatarImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
-  doctorInfo: {
-    flex: 1,
-  },
-  doctorName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 5,
-  },
-  doctorSpecialty: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-    marginBottom: 5,
-  },
-  doctorBranch: {
-    fontSize: 13,
-    color: COLORS.primary,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  feesRow: {
-    flexDirection: 'row',
-    gap: 15,
-  },
-  feeText: {
-    fontSize: 12,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  doctorActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  viewProfileButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.background,
-    paddingVertical: 12,
-    borderRadius: SIZES.radius,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    gap: 6,
-  },
-  viewProfileText: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  selectDoctorButton: {
-    flex: 1,
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: SIZES.radius,
-    gap: 6,
-  },
-  selectDoctorText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  availabilityBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: COLORS.success + '20',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 3,
-  },
-  badgeText: {
-    fontSize: 10,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 50,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginTop: 20,
-  },
-  emptySubText: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.background,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  profileContent: {
-    flex: 1,
-    padding: 20,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  profileAvatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 4,
-    borderColor: COLORS.primary,
-  },
-  profileImage: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  profileSpecialty: {
-    fontSize: 16,
-    color: COLORS.lightGray,
-    marginTop: 5,
-  },
-  profileBranch: {
-    fontSize: 14,
-    color: COLORS.primary,
-    marginTop: 5,
-    fontWeight: '600',
-  },
-  profileSection: {
-    backgroundColor: COLORS.card,
-    padding: 15,
-    borderRadius: SIZES.radius,
-    marginBottom: 15,
-  },
-  profileSectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 10,
-  },
-  profileDetail: {
-    fontSize: 14,
-    color: COLORS.text,
-    marginBottom: 5,
-    lineHeight: 20,
-  },
-  profileDetailDisabled: {
-    fontSize: 14,
-    color: COLORS.lightGray,
-    marginBottom: 5,
-    lineHeight: 20,
-  },
-  profileAbout: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 22,
-  },
-  selectFromProfileButton: {
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 15,
-    borderRadius: SIZES.radius,
-    gap: 8,
-    marginTop: 10,
-    marginBottom: 30,
-  },
-  selectFromProfileText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 10, fontSize: 16, color: COLORS.text },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: COLORS.card, borderBottomWidth: 1, borderBottomColor: COLORS.background },
+  title: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginLeft: 15 },
+  infoCard: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: COLORS.primary + '15', padding: 18, margin: 20, borderRadius: SIZES.radius, borderLeftWidth: 4, borderLeftColor: COLORS.primary },
+  infoText: { flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 20, marginLeft: 12 },
+  section: { padding: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, marginBottom: 5 },
+  sectionSubtitle: { fontSize: 14, color: COLORS.lightGray, marginBottom: 15 },
+  branchOption: { backgroundColor: COLORS.card, borderRadius: SIZES.radius, padding: 18, marginBottom: 12, borderWidth: 2, borderColor: COLORS.lightGray },
+  selectedBranchOption: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  branchContent: { flexDirection: 'row', alignItems: 'center' },
+  branchInfo: { flex: 1, marginLeft: 15 },
+  branchName: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
+  branchLocation: { fontSize: 14, color: COLORS.lightGray, marginTop: 3 },
+  selectedBranchText: { color: 'white' },
+  feeCard: { backgroundColor: COLORS.card, padding: 20, borderRadius: SIZES.radius, marginBottom: 15, borderWidth: 2, borderColor: COLORS.lightGray },
+  feeHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  feeTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text, flex: 1, marginLeft: 12 },
+  feeDescription: { fontSize: 14, color: COLORS.lightGray, lineHeight: 20, marginBottom: 15 },
+  inputContainer: { marginTop: 5 },
+  inputLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 8 },
+  feeInput: { backgroundColor: COLORS.background, borderRadius: SIZES.radius, padding: 15, fontSize: 18, fontWeight: 'bold', color: COLORS.text, borderWidth: 2, borderColor: COLORS.primary, textAlign: 'center' },
+  feeNote: { fontSize: 12, color: COLORS.lightGray, marginTop: 8, fontStyle: 'italic' },
+  previewSection: { padding: 20 },
+  previewTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, marginBottom: 15 },
+  previewCard: { backgroundColor: COLORS.card, padding: 20, borderRadius: SIZES.radius, borderWidth: 3, borderColor: COLORS.success },
+  previewHeader: { fontSize: 14, fontWeight: 'bold', color: COLORS.text, marginBottom: 15, textAlign: 'center' },
+  previewRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  previewLabel: { fontSize: 14, color: COLORS.text },
+  previewValue: { fontSize: 14, fontWeight: 'bold', color: COLORS.primary },
+  saveButton: { backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 18, borderRadius: SIZES.radius, margin: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 6 },
+  savingButton: { opacity: 0.7 },
+  saveButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
 });

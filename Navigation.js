@@ -24,7 +24,7 @@ import SearchMedicineScreen from './screens/SearchMedicineScreen';
 import ViewProfileScreen from './screens/ViewProfileScreen'; 
 import DoctorListScreen from './screens/DoctorListScreen';
 import DoctorSelectionScreen from './screens/DoctorSelectionScreen';
-import MedicineCheckoutScreen from './screens/MedicinePaymentScreen';
+import MedicinePaymentScreen from './screens/MedicinePaymentScreen';
 import ConsultationPaymentScreen from './screens/ConsultationPaymentScreen';
 import SetConsultationFeeScreen from './screens/SetConsultationFeeScreen';
 import { auth } from './firebaseConfig';
@@ -92,11 +92,6 @@ export default function AppNavigator() {
           component={PatientProfile} 
           options={{ title: 'Patient Profile' }} 
         />
-        <Stack.Screen 
-  name="MedicineCheckout" 
-  component={MedicineCheckoutScreen} 
-  options={{ headerShown: false }}
-/>
 
         <Stack.Screen 
           name="SetConsultationFee" 
@@ -124,6 +119,12 @@ export default function AppNavigator() {
         <Stack.Screen 
           name="ConsultationPayment" 
           component={ConsultationPaymentScreen} 
+          options={{ headerShown: false }}
+        />
+
+        <Stack.Screen 
+          name="MedicinePayment" 
+          component={MedicinePaymentScreen} 
           options={{ headerShown: false }}
         />
 
