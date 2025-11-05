@@ -1,4 +1,3 @@
-// DoctorChatScreen - Standalone version (no GenericChatList dependency)
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,7 +12,7 @@ import { db, auth } from '../firebaseConfig';
 import { ref, onValue } from 'firebase/database';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function DoctorChatScreen({ navigation }) {
+export default function ClientChatScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [chats, setChats] = useState([]);
 
@@ -23,17 +22,16 @@ export default function DoctorChatScreen({ navigation }) {
     const userId = auth.currentUser.uid;
     const usersRef = ref(db, 'users');
 
-    // Get all patients (doctors chat with patients)
+    // Get all patients
     const unsubscribe = onValue(usersRef, (snapshot) => {
       const data = snapshot.val() || {};
       const patientsList = Object.entries(data)
         .filter(([uid, user]) => user.role === 'Patient' && uid !== userId)
         .map(([uid, user]) => ({
           id: uid,
-          name: user.name || 'Unknown Patient',
+          name: user.name || 'Unknown',
           email: user.email || '',
           role: user.role,
-          age: user.age || 'N/A',
           lastMessage: 'No messages yet',
           timestamp: Date.now(),
         }));
@@ -61,9 +59,6 @@ export default function DoctorChatScreen({ navigation }) {
 
       <View style={{ flex: 1, marginLeft: 12 }}>
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.details}>
-          Age: {item.age} | Patient
-        </Text>
         <Text style={styles.lastMessage} numberOfLines={1}>
           {item.lastMessage}
         </Text>
@@ -98,7 +93,7 @@ export default function DoctorChatScreen({ navigation }) {
           <Ionicons name="chatbubbles-outline" size={60} color={COLORS.lightGray} />
           <Text style={styles.emptyText}>No Chats Yet</Text>
           <Text style={styles.emptySubText}>
-            Start chatting with patients to see them here
+            Patients you communicate with will appear here
           </Text>
         </View>
       )}
@@ -151,11 +146,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.text,
-  },
-  details: {
-    fontSize: 12,
-    color: COLORS.lightGray,
-    marginTop: 2,
   },
   lastMessage: {
     fontSize: 13,

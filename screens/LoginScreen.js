@@ -1,11 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet, Image, KeyboardAvoidingView, ScrollView, Platform, Animated, Easing } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Animated,
+  Easing,
+} from 'react-native';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '../firebaseConfig';
 import { COLORS, SIZES } from '../Theme';
 import { get, ref } from 'firebase/database';
 import { Ionicons } from '@expo/vector-icons';
-import { saveToStorage, STORAGE_KEYS } from '../offlineStorage';  
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -20,6 +31,7 @@ export default function LoginScreen({ navigation }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Logo entrance animation
     Animated.parallel([
       Animated.spring(logoScale, {
         toValue: 1,
@@ -35,6 +47,7 @@ export default function LoginScreen({ navigation }) {
       }),
     ]).start();
 
+    // Form entrance animation
     Animated.parallel([
       Animated.timing(formSlide, {
         toValue: 0,
@@ -51,6 +64,7 @@ export default function LoginScreen({ navigation }) {
       }),
     ]).start();
 
+    // Pulse animation
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -85,19 +99,48 @@ export default function LoginScreen({ navigation }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       const snapshot = await get(ref(db, `users/${user.uid}`));
-      
+
       if (snapshot.exists()) {
         const userData = snapshot.val();
-        const role = userData.role;
-        
-        await saveToStorage(STORAGE_KEYS.USER_DATA, userData);
-        
-        navigation.replace(role.toLowerCase() === 'doctor' ? 'DoctorTabs' : 'PatientTabs');
+        const role = userData.role?.toLowerCase();
+
+        // Navigate based on role
+        if (role === 'doctor') {
+          navigation.replace('DoctorTabs');
+        } else if (role === 'patient') {
+          navigation.replace('PatientTabs');
+        } else if (role === 'pharmacist') {
+          // Check if pharmacist has set up initial medicines
+          const medicinesSnapshot = await get(ref(db, `pharmacists/${user.uid}/medicines`));
+          
+          if (medicinesSnapshot.exists()) {
+            navigation.replace('PharmacistTabs');
+          } else {
+            // First-time setup: select initial medicines
+            navigation.replace('SelectInitialMedicines');
+          }
+        } else {
+          Alert.alert('Error', 'Invalid user role');
+        }
       } else {
         Alert.alert('Error', 'User data not found');
       }
     } catch (error) {
-      Alert.alert('Login Error', error.message);
+      console.log('Login error:', error);
+      
+      // Better error messages
+      let errorMessage = 'Login failed';
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many attempts. Please try again later';
+      }
+      
+      Alert.alert('Login Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -113,6 +156,7 @@ export default function LoginScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Logo Section */}
         <View style={styles.logoContainer}>
           <Animated.View
             style={{
@@ -144,21 +188,34 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
 
+          {/* Email Input */}
           <View style={styles.inputContainer}>
-            <Ionicons name="mail-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
+            <Ionicons
+              name="mail-outline"
+              size={20}
+              color={COLORS.lightGray}
+              style={styles.inputIcon}
+            />
             <TextInput
               placeholder="Email"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
               style={styles.input}
               placeholderTextColor={COLORS.lightGray}
             />
           </View>
 
+          {/* Password Input */}
           <View style={styles.inputContainer}>
-            <Ionicons name="lock-closed-outline" size={20} color={COLORS.lightGray} style={styles.inputIcon} />
+            <Ionicons
+              name="lock-closed-outline"
+              size={20}
+              color={COLORS.lightGray}
+              style={styles.inputIcon}
+            />
             <TextInput
               placeholder="Password"
               value={password}
@@ -176,14 +233,18 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
+          {/* Login Button */}
           <TouchableOpacity
             onPress={handleLogin}
             style={[styles.loginButton, loading && styles.loginButtonDisabled]}
             disabled={loading}
           >
-            <Text style={styles.loginButtonText}>{loading ? 'Signing In...' : 'Login'}</Text>
+            <Text style={styles.loginButtonText}>
+              {loading ? 'Signing In...' : 'Login'}
+            </Text>
           </TouchableOpacity>
 
+          {/* Register Link */}
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
@@ -205,6 +266,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     padding: SIZES.padding,
+    paddingTop: 40,
   },
   logoContainer: {
     alignItems: 'center',
@@ -293,6 +355,7 @@ const styles = StyleSheet.create({
   },
   loginButtonDisabled: {
     backgroundColor: COLORS.lightGray,
+    opacity: 0.6,
   },
   loginButtonText: {
     color: '#fff',

@@ -72,7 +72,8 @@ export default function HomeScreen({ navigation }) {
 
   const renderFeatureCard = (item) => (
     <TouchableOpacity
-      key={item.name}
+      // use screen as primary key (fallback to name) to avoid duplicate name collisions
+      key={item.screen || item.name}
       style={[styles.card, { borderLeftWidth: 4, borderLeftColor: item.color }]}
       onPress={() => navigation.navigate(item.screen)}
     >

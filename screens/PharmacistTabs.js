@@ -1,20 +1,39 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { COLORS } from '../Theme';
+import { useNavigation } from '@react-navigation/native';
 
-// Patient Screens
-import HomeScreen from './HomeScreen';
-import CartScreen from './CartScreen';
-import NotificationsScreen from './NotificationsScreen';
+// Screens
+import PharmacistDashboard from './PharmacistDashboard';
+import ManageInventoryScreen from './ManageInventoryScreen';
 import ProfileScreen from './ProfileScreen';
 import SettingsScreen from './SettingsScreen';
+import ClientChatScreen from './ClientChatScreen'; // Chat with patients & doctors
 
 const Tab = createBottomTabNavigator();
 
-export default function PatientTabs() {
-  // Shared tab bar styling
+/**
+ * Badge Component - Shows notification count
+ */
+const BadgeIcon = ({ count, children }) => {
+  if (!count || count === 0) return children;
+  
+  return (
+    <View style={{ position: 'relative' }}>
+      {children}
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>{count > 99 ? '99+' : count}</Text>
+      </View>
+    </View>
+  );
+};
+
+export default function PharmacistTabs() {
+  const navigation = useNavigation();
+
+  // Tab bar options styling
   const tabBarOptions = {
     tabBarActiveTintColor: COLORS.primary,
     tabBarInactiveTintColor: '#95A5A6',
@@ -43,7 +62,7 @@ export default function PatientTabs() {
     },
   };
 
-  // Shared header styling
+  // Header options styling
   const headerOptions = {
     headerShown: true,
     headerStyle: { 
@@ -64,14 +83,14 @@ export default function PatientTabs() {
   return (
     <Tab.Navigator screenOptions={tabBarOptions}>
       
-      {/* Home Tab */}
+      {/* Dashboard Tab */}
       <Tab.Screen
-        name="Home"
-        component={HomeScreen}
+        name="Dashboard"
+        component={PharmacistDashboard}
         options={{
           ...headerOptions,
-          headerTitle: 'Patient Home',
-          tabBarLabel: 'Home',
+          headerTitle: 'Pharmacist Dashboard',
+          tabBarLabel: 'Dashboard',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons 
               name={focused ? 'home' : 'home-outline'} 
@@ -82,17 +101,17 @@ export default function PatientTabs() {
         }}
       />
 
-      {/* Cart/Orders Tab */}
+      {/* Inventory Management Tab */}
       <Tab.Screen
-        name="Cart"
-        component={CartScreen}
+        name="Inventory"
+        component={ManageInventoryScreen}
         options={{
           ...headerOptions,
-          headerTitle: 'My Cart',
-          tabBarLabel: 'Cart',
+          headerTitle: 'Manage Inventory',
+          tabBarLabel: 'Inventory',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons 
-              name={focused ? 'basket' : 'basket-outline'} 
+              name={focused ? 'cube' : 'cube-outline'} 
               size={24} 
               color={color} 
             />
@@ -100,21 +119,23 @@ export default function PatientTabs() {
         }}
       />
 
-      {/* Notifications Tab */}
+      {/* Chat Tab */}
       <Tab.Screen
-        name="Notifications"
-        component={NotificationsScreen}
+        name="Chat"
+        component={ClientChatScreen}
         options={{
           ...headerOptions,
-          headerTitle: 'Notifications',
-          tabBarLabel: 'Alerts',
+          headerTitle: 'Messages',
+          tabBarLabel: 'Chat',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons 
-              name={focused ? 'notifications' : 'notifications-outline'} 
+              name={focused ? 'chatbubble' : 'chatbubble-outline'} 
               size={24} 
               color={color} 
             />
           ),
+          // You can add badge here if you have unread count
+          // tabBarBadge: unreadCount > 0 ? unreadCount : null,
         }}
       />
 
@@ -158,4 +179,23 @@ export default function PatientTabs() {
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  badge: {
+    position: 'absolute',
+    right: -6,
+    top: -3,
+    backgroundColor: COLORS.error,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.card,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+});
